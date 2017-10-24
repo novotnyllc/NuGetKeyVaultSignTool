@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.CommandLineUtils;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace NuGetKeyVaultSignTool
@@ -59,6 +60,36 @@ namespace NuGetKeyVaultSignTool
                 });
             }
             );
+
+            // Verify
+            var verifyCommand = application.Command("verify", throwOnUnexpectedArg: false, configuration: verifyConfiguration =>
+            {
+                verifyConfiguration.Description = "Verifies NuGet packages are signed correctly";
+                verifyConfiguration.HelpOption("-? | -h | --help");
+
+                var file = verifyConfiguration.Argument("file", "File to sign.");
+
+                verifyConfiguration.OnExecute(async () =>
+                {
+                    if (string.IsNullOrWhiteSpace(file.Value))
+                    {
+                        application.Error.WriteLine("All arguments are required");
+                        return -1;
+                    }
+
+                    if (!File.Exists(file.Value))
+                    {
+                        application.Error.WriteLine("File does not exist");
+                        return -1;
+                    }
+                 
+                    var cmd = new VerifyCommand(application);
+                    var result = await cmd.VerifyAsync(file.Value);
+                    return result ? 0 : -1;
+                });
+            }
+            );
+
 
             application.HelpOption("-? | -h | --help");
             application.VersionOption("-v | --version", typeof(Program).Assembly.GetName().Version.ToString(3));

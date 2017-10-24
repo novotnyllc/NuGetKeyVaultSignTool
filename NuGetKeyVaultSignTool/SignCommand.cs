@@ -64,32 +64,32 @@ namespace NuGetKeyVaultSignTool
             var cert = new X509Certificate2(kvcert.Cer);
 
 
-            var package = new SignedPackageArchive(new ZipArchive(File.Open(file, FileMode.Open), ZipArchiveMode.Update, false));
-
-            var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
-
-            var signer = new Signer(package, new KeyVaultSignatureProvider(rsa, new TimestampProvider()));
-
-            // TODO: Add Hash Alg choice
-            var request = new SignPackageRequest()
+            using (var package = new SignedPackageArchive(new ZipArchive(File.Open(file, FileMode.Open), ZipArchiveMode.Update, false)))
             {
-                Certificate = cert,
-                HashAlgorithm = HashAlgorithmName.SHA256
-            };
+                var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
 
-            try
-            {
-                await signer.SignAsync(request, new NullLogger(), CancellationToken.None);
-                package.Dispose();
+                var signer = new Signer(package, new KeyVaultSignatureProvider(rsa, new TimestampProvider()));
+
+                // TODO: Add Hash Alg choice
+                var request = new SignPackageRequest()
+                {
+                    Certificate = cert,
+                    HashAlgorithm = HashAlgorithmName.SHA256
+                };
+
+                try
+                {
+                    await signer.SignAsync(request, new NullLogger(), CancellationToken.None);
+                }
+                catch (Exception e)
+                {
+                    Console.Error.WriteLine(e.Message);
+                    Console.Error.WriteLine(e.StackTrace);
+                    return -1;
+                }
+
+                return 0;
             }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine(e.Message);
-                Console.Error.WriteLine(e.StackTrace);
-                return -1;
-            }
-
-            return 0;
         }
     }
 }
