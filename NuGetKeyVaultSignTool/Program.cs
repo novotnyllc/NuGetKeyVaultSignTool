@@ -101,7 +101,7 @@ namespace NuGetKeyVaultSignTool
 
             application.HelpOption("-? | -h | --help");
             application.VersionOption("-v | --version", typeof(Program).Assembly.GetName().Version.ToString(3));
-            if (args.Length == 0 || args[0] != "sign")
+            if (args.Length == 0)
             {
                 application.ShowHelp();
             }
