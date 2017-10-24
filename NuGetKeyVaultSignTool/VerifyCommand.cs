@@ -32,7 +32,6 @@ namespace NuGetKeyVaultSignTool
                     var verifier = new SignedPackageVerifier(new ISignatureVerificationProvider[] {new X509SignatureVerificationProvider()}, SignedPackageVerifierSettings.RequireSigned);
 
                     var result = await verifier.VerifySignaturesAsync(package, new NullLogger(), CancellationToken.None);
-
                     return result.Valid;
                 }
             }

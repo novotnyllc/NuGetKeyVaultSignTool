@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -53,9 +52,8 @@ namespace NuGetKeyVaultSignTool
             var chain = new X509Chain();
             chain.Build(publicCert);
 
-            // Get the chain //without the root CA
+            // Get the chain as bc certs
             var additionals = chain.ChainElements.Cast<X509ChainElement>()
-                                  // .Where(ce => ce.Certificate.Issuer != ce.Certificate.SubjectName.Name)
                                    .Select(ce => DotNetUtilities.FromX509Certificate(ce.Certificate))
                                    .ToList();
 
@@ -76,7 +74,7 @@ namespace NuGetKeyVaultSignTool
             var data = generator.Generate(msg, true);
 
             var encoded = data.GetEncoded();
-
+            
             return Signature.Load(encoded);
         }
     }

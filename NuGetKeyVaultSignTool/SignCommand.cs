@@ -13,7 +13,6 @@ using Microsoft.Azure.KeyVault;
 using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using NuGet.Common;
-using NuGet.Packaging;
 using NuGet.Packaging.Signing;
 
 namespace NuGetKeyVaultSignTool

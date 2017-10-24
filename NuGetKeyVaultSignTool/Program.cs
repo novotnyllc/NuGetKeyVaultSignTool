@@ -85,6 +85,14 @@ namespace NuGetKeyVaultSignTool
                  
                     var cmd = new VerifyCommand(application);
                     var result = await cmd.VerifyAsync(file.Value);
+                    if (result)
+                    {
+                        Console.WriteLine("Signature is valid");
+                    }
+                    else
+                    {
+                        Console.Write("Signature is invalid");
+                    }
                     return result ? 0 : -1;
                 });
             }
