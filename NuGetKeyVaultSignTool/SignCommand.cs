@@ -2,20 +2,26 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
+using NuGet.Common;
+using NuGet.Packaging;
+using NuGet.Packaging.Signing;
 
 namespace NuGetKeyVaultSignTool
 {
     class SignCommand
     {
         readonly CommandLineApplication application;
-
+        
         public SignCommand(CommandLineApplication application)
         {
             this.application = application;
@@ -55,6 +61,32 @@ namespace NuGetKeyVaultSignTool
             // We call this here to verify it's a valid cert
             // It also implicitly validates the access token or credentials
             var kvcert = await client.GetCertificateAsync(keyVaultUrl, keyVaultCertificateName).ConfigureAwait(false);
+            var cert = new X509Certificate2(kvcert.Cer);
+
+
+            var package = new SignedPackageArchive(new ZipArchive(File.Open(file, FileMode.Open), ZipArchiveMode.Update, false));
+
+            var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
+
+            var signer = new Signer(package, new KeyVaultSignatureProvider(rsa, new TimestampProvider()));
+
+            // TODO: Add Hash Alg choice
+            var request = new SignPackageRequest()
+            {
+                Certificate = cert,
+                HashAlgorithm = HashAlgorithmName.SHA256
+            };
+
+            try
+            {
+                await signer.SignAsync(request, new NullLogger(), CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e.Message);
+                Console.Error.WriteLine(e.StackTrace);
+                return -1;
+            }
 
             return 0;
         }
