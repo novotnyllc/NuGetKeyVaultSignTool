@@ -80,6 +80,7 @@ namespace NuGetKeyVaultSignTool
             try
             {
                 await signer.SignAsync(request, new NullLogger(), CancellationToken.None);
+                package.Dispose();
             }
             catch (Exception e)
             {
