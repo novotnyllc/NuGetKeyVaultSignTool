@@ -27,6 +27,7 @@ namespace NuGetKeyVaultSignTool
         }
         
         public async Task<int> SignAsync(string file,
+                                         string timestampUrl,
                                          string keyVaultCertificateName,
                                          string keyVaultUrl,
                                          string keyVaultClientId,
@@ -67,13 +68,14 @@ namespace NuGetKeyVaultSignTool
             {
                 var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
 
-                var signer = new Signer(package, new KeyVaultSignatureProvider(rsa, new TimestampProvider()));
+                var signer = new Signer(package, new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl))));
 
                 // TODO: Add Hash Alg choice
                 var request = new SignPackageRequest()
                 {
                     Certificate = cert,
-                    HashAlgorithm = HashAlgorithmName.SHA256
+                    SignatureHashAlgorithm = HashAlgorithmName.SHA256,
+                    TimestampHashAlgorithm = HashAlgorithmName.SHA256
                 };
 
                 try

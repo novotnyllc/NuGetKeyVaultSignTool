@@ -17,6 +17,7 @@ namespace NuGetKeyVaultSignTool
 
                 var file = signConfiguration.Argument("file", "File to sign.");
 
+                var timestamp = signConfiguration.Option("-t | --timestamp", "A URL of the timestamping server to timestamp the signature.", CommandOptionType.SingleValue);
                 var azureKeyVaultUrl = signConfiguration.Option("-kvu | --azure-key-vault-url", "The URL to an Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultClientId = signConfiguration.Option("-kvi | --azure-key-vault-client-id", "The Client ID to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultClientSecret = signConfiguration.Option("-kvs | --azure-key-vault-client-secret", "The Client Secret to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
@@ -43,6 +44,12 @@ namespace NuGetKeyVaultSignTool
                         return Task.FromResult(-1);
                     }
 
+                    if (!timestamp.HasValue())
+                    {
+                        application.Error.WriteLine("Timestamp url not specified");
+                        return Task.FromResult(-1);
+                    }
+
                     var valid = (azureKeyVaultAccessToken.HasValue() || (azureKeyVaultClientId.HasValue() && azureKeyVaultClientSecret.HasValue()));
                     if (!valid)
                     {
@@ -52,6 +59,7 @@ namespace NuGetKeyVaultSignTool
 
                     var cmd = new SignCommand(application);
                     return cmd.SignAsync(file.Value,
+                                         timestamp.Value(),
                                          azureKeyVaultCertificateName.Value(),
                                          azureKeyVaultUrl.Value(),
                                          azureKeyVaultClientId.Value(),

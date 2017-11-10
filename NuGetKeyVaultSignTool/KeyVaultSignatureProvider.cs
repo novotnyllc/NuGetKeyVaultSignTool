@@ -26,7 +26,7 @@ namespace NuGetKeyVaultSignTool
             this.timestampProvider = timestampProvider ?? throw new ArgumentNullException(nameof(timestampProvider));
         }
 
-        public Task<Signature> CreateSignatureAsync(SignPackageRequest request, SignatureManifest signatureManifest, ILogger logger, CancellationToken token)
+        public async Task<Signature> CreateSignatureAsync(SignPackageRequest request, SignatureManifest signatureManifest, ILogger logger, CancellationToken token)
         {
             if (request == null)
             {
@@ -43,8 +43,10 @@ namespace NuGetKeyVaultSignTool
                 throw new ArgumentNullException(nameof(logger));
             }
 
-            var signature = CreateKeyVaultSignature(request.Certificate, signatureManifest);
-            return Task.FromResult(signature);
+            var authorSignature = CreateKeyVaultSignature(request.Certificate, signatureManifest);
+            var timestamped = await TimestampSignature(request, logger, authorSignature, token);
+
+            return timestamped;
         }
 
         Signature CreateKeyVaultSignature(X509Certificate2 publicCert, SignatureManifest signatureManifest)
@@ -76,6 +78,20 @@ namespace NuGetKeyVaultSignTool
             var encoded = data.GetEncoded();
             
             return Signature.Load(encoded);
+        }
+
+
+        Task<Signature> TimestampSignature(SignPackageRequest request, ILogger logger, Signature signature, CancellationToken token)
+        {
+            var timestampRequest = new TimestampRequest
+            {
+                Signature = signature,
+                Certificate = request.Certificate,
+                SigningSpec = SigningSpecifications.V1,
+                TimestampHashAlgorithm = request.TimestampHashAlgorithm
+            };
+
+            return timestampProvider.TimestampSignatureAsync(timestampRequest, logger, token);
         }
     }
 }
