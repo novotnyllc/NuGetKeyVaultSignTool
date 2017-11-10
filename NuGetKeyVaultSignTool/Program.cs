@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using NuGet.Common;
 
 namespace NuGetKeyVaultSignTool
 {
@@ -17,7 +18,9 @@ namespace NuGetKeyVaultSignTool
 
                 var file = signConfiguration.Argument("file", "File to sign.");
 
-                var timestamp = signConfiguration.Option("-t | --timestamp", "A URL of the timestamping server to timestamp the signature.", CommandOptionType.SingleValue);
+                var fileDigestAlgorithm = signConfiguration.Option("-fd | --file-digest", "The digest algorithm to hash the file with.", CommandOptionType.SingleValue);
+                var rfc3161TimeStamp = signConfiguration.Option("-tr | --timestamp-rfc3161", "Specifies the RFC 3161 timestamp server's URL. If this option (or -t) is not specified, the signed file will not be timestamped.", CommandOptionType.SingleValue);
+                var rfc3161Digest = signConfiguration.Option("-td | --timestamp-digest", "Used with the -tr switch to request a digest algorithm used by the RFC 3161 timestamp server.", CommandOptionType.SingleValue);
                 var azureKeyVaultUrl = signConfiguration.Option("-kvu | --azure-key-vault-url", "The URL to an Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultClientId = signConfiguration.Option("-kvi | --azure-key-vault-client-id", "The Client ID to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultClientSecret = signConfiguration.Option("-kvs | --azure-key-vault-client-secret", "The Client Secret to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
@@ -44,7 +47,7 @@ namespace NuGetKeyVaultSignTool
                         return Task.FromResult(-1);
                     }
 
-                    if (!timestamp.HasValue())
+                    if (!rfc3161TimeStamp.HasValue())
                     {
                         application.Error.WriteLine("Timestamp url not specified");
                         return Task.FromResult(-1);
@@ -57,9 +60,14 @@ namespace NuGetKeyVaultSignTool
                         return Task.FromResult(-1);
                     }
 
+                    var sigHashAlg = GetValueFromOption(fileDigestAlgorithm, AlgorithmFromInput, HashAlgorithmName.SHA256);
+                    var timeHashAlg = GetValueFromOption(rfc3161Digest, AlgorithmFromInput, HashAlgorithmName.SHA256);
+
                     var cmd = new SignCommand(application);
                     return cmd.SignAsync(file.Value,
-                                         timestamp.Value(),
+                                         rfc3161TimeStamp.Value(),
+                                         sigHashAlg,
+                                         timeHashAlg,
                                          azureKeyVaultCertificateName.Value(),
                                          azureKeyVaultUrl.Value(),
                                          azureKeyVaultClientId.Value(),
@@ -115,5 +123,32 @@ namespace NuGetKeyVaultSignTool
             }
             return application.Execute(args);
         }
+
+        static HashAlgorithmName? AlgorithmFromInput(string value)
+        {
+            switch (value?.ToLower())
+            {
+                case "sha384":
+                    return HashAlgorithmName.SHA384;
+                case "sha512":
+                    return HashAlgorithmName.SHA512;
+                case null:
+                case "sha256":
+                    return HashAlgorithmName.SHA256;
+                default:
+                    return null;
+
+            }
+        }
+
+        static T GetValueFromOption<T>(CommandOption option, Func<string, T?> transform, T defaultIfNull) where T : struct
+        {
+            if (!option.HasValue())
+            {
+                return defaultIfNull;
+            }
+            return transform(option.Value()) ?? defaultIfNull;
+        }
+
     }
 }

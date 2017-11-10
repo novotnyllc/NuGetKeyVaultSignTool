@@ -28,6 +28,8 @@ namespace NuGetKeyVaultSignTool
         
         public async Task<int> SignAsync(string file,
                                          string timestampUrl,
+                                         HashAlgorithmName signatureHashAlgorithm,
+                                         HashAlgorithmName timestampeHashAlgorithm,
                                          string keyVaultCertificateName,
                                          string keyVaultUrl,
                                          string keyVaultClientId,
@@ -74,8 +76,8 @@ namespace NuGetKeyVaultSignTool
                 var request = new SignPackageRequest()
                 {
                     Certificate = cert,
-                    SignatureHashAlgorithm = HashAlgorithmName.SHA256,
-                    TimestampHashAlgorithm = HashAlgorithmName.SHA256
+                    SignatureHashAlgorithm = signatureHashAlgorithm,
+                    TimestampHashAlgorithm = timestampeHashAlgorithm
                 };
 
                 try
