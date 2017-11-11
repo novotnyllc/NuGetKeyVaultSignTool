@@ -49,7 +49,7 @@ namespace NuGetKeyVaultSignTool
             return timestamped;
         }
 
-        Signature CreateKeyVaultSignature(X509Certificate2 publicCert, SignatureManifest signatureManifest)
+        byte[] CreateKeyVaultSignature(X509Certificate2 publicCert, SignatureManifest signatureManifest)
         {
             var chain = new X509Chain();
             chain.Build(publicCert);
@@ -76,16 +76,16 @@ namespace NuGetKeyVaultSignTool
             var data = generator.Generate(msg, true);
 
             var encoded = data.GetEncoded();
-            
-            return Signature.Load(encoded);
+
+            return encoded;
         }
 
 
-        Task<Signature> TimestampSignature(SignPackageRequest request, ILogger logger, Signature signature, CancellationToken token)
+        Task<Signature> TimestampSignature(SignPackageRequest request, ILogger logger, byte[] signature, CancellationToken token)
         {
             var timestampRequest = new TimestampRequest
             {
-                Signature = signature,
+                SignatureValue = signature,
                 Certificate = request.Certificate,
                 SigningSpec = SigningSpecifications.V1,
                 TimestampHashAlgorithm = request.TimestampHashAlgorithm
