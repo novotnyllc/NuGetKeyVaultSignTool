@@ -98,7 +98,7 @@ namespace NuGetKeyVaultSignTool
                         application.Error.WriteLine("File does not exist");
                         return -1;
                     }
-                 
+
                     var cmd = new VerifyCommand(application);
                     var result = await cmd.VerifyAsync(file.Value);
                     if (result)

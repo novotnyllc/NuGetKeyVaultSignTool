@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.CommandLineUtils;
 using NuGet.Common;
+using NuGet.Packaging;
 using NuGet.Packaging.Signing;
 
 namespace NuGetKeyVaultSignTool
@@ -27,9 +28,10 @@ namespace NuGetKeyVaultSignTool
         {
             try
             {
-                using (var package = new SignedPackageArchive(new ZipArchive(File.Open(file, FileMode.Open), ZipArchiveMode.Read, false)))
+                using (var package = new PackageArchiveReader(file))
                 {
-                    var verifier = new SignedPackageVerifier(new ISignatureVerificationProvider[] {new X509SignatureVerificationProvider()}, SignedPackageVerifierSettings.RequireSigned);
+
+                    var verifier = new PackageSignatureVerifier(new ISignatureVerificationProvider[] { new X509SignatureVerificationProvider() }, SignedPackageVerifierSettings.RequireSigned);
 
                     var result = await verifier.VerifySignaturesAsync(package, new NullLogger(), CancellationToken.None);
                     return result.Valid;

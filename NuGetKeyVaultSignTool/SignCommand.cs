@@ -66,33 +66,68 @@ namespace NuGetKeyVaultSignTool
             var cert = new X509Certificate2(kvcert.Cer);
 
 
-            using (var package = new SignedPackageArchive(new ZipArchive(File.Open(file, FileMode.Open), ZipArchiveMode.Update, false)))
+      
+            var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
+
+            // TODO: Add Hash Alg choice
+            var request = new SignPackageRequest()
             {
-                var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
+                Certificate = cert,
+                SignatureHashAlgorithm = signatureHashAlgorithm,
+                TimestampHashAlgorithm = timestampeHashAlgorithm
+            };
 
-                var signer = new Signer(package, new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl))));
+            string tempFilePath = null;
+            try
+            {
+                tempFilePath = CopyPackage(file);
 
-                // TODO: Add Hash Alg choice
-                var request = new SignPackageRequest()
+                using (var packageWriteStream = File.OpenWrite(tempFilePath))
+                using (var packageReadStream = File.OpenRead(file))
                 {
-                    Certificate = cert,
-                    SignatureHashAlgorithm = signatureHashAlgorithm,
-                    TimestampHashAlgorithm = timestampeHashAlgorithm
-                };
+                    var package = new SignedPackageArchive(packageReadStream, packageWriteStream);
+                    var signer = new Signer(package, new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl))));
 
-                try
-                {
+                    // This command overwrites by default, like signtool
+                    await signer.RemoveSignaturesAsync(new NullLogger(), CancellationToken.None);
                     await signer.SignAsync(request, new NullLogger(), CancellationToken.None);
                 }
-                catch (Exception e)
-                {
-                    Console.Error.WriteLine(e.Message);
-                    Console.Error.WriteLine(e.StackTrace);
-                    return -1;
-                }
 
-                return 0;
+                OverwritePackage(tempFilePath, file);
             }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e.Message);
+                Console.Error.WriteLine(e.StackTrace);
+                return -1;
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(tempFilePath))
+                        File.Delete(tempFilePath);
+                }
+                catch
+                { 
+                }
+            }
+
+            return 0;
+            }
+        
+
+        static string CopyPackage(string sourceFilePath)
+        {
+            var destFilePath = Path.GetTempFileName();
+            File.Copy(sourceFilePath, destFilePath, overwrite: true);
+
+            return destFilePath;
+        }
+
+        static void OverwritePackage(string sourceFilePath, string destFilePath)
+        {
+            File.Copy(sourceFilePath, destFilePath, overwrite: true);
         }
     }
 }
