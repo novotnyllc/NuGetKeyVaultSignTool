@@ -25,7 +25,7 @@ namespace NuGetKeyVaultSignTool
         {
             this.application = application;
         }
-        
+
         public async Task<int> SignAsync(string file,
                                          string timestampUrl,
                                          HashAlgorithmName signatureHashAlgorithm,
@@ -37,7 +37,7 @@ namespace NuGetKeyVaultSignTool
                                          string keyVaultAccessToken)
         {
             string validatedToken = null;
-            
+
             async Task<string> Authenticate(string authority, string resource, string scope)
             {
                 if (!string.IsNullOrWhiteSpace(keyVaultAccessToken))
@@ -49,7 +49,8 @@ namespace NuGetKeyVaultSignTool
                 var context = new AuthenticationContext(authority);
                 var credential = new ClientCredential(keyVaultClientId, keyVaultClientSecret);
 
-                var result = await context.AcquireTokenAsync(resource, credential).ConfigureAwait(false);
+                var result = await context.AcquireTokenAsync(resource, credential)
+                                          .ConfigureAwait(false);
                 if (result == null)
                 {
                     throw new InvalidOperationException("Authentication to Azure failed.");
@@ -62,11 +63,12 @@ namespace NuGetKeyVaultSignTool
 
             // We call this here to verify it's a valid cert
             // It also implicitly validates the access token or credentials
-            var kvcert = await client.GetCertificateAsync(keyVaultUrl, keyVaultCertificateName).ConfigureAwait(false);
+            var kvcert = await client.GetCertificateAsync(keyVaultUrl, keyVaultCertificateName)
+                                     .ConfigureAwait(false);
             var cert = new X509Certificate2(kvcert.Cer);
 
 
-      
+
             var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
 
             // TODO: Add Hash Alg choice
@@ -77,15 +79,11 @@ namespace NuGetKeyVaultSignTool
                 TimestampHashAlgorithm = timestampeHashAlgorithm
             };
 
-            string tempFilePath = null;
             try
             {
-                tempFilePath = CopyPackage(file);
-
-                using (var packageWriteStream = File.OpenWrite(tempFilePath))
-                using (var packageReadStream = File.OpenRead(file))
+                using (var packageWriteStream = File.Open(file, FileMode.Open))
                 {
-                    var package = new SignedPackageArchive(packageReadStream, packageWriteStream);
+                    var package = new SignedPackageArchive(packageWriteStream, packageWriteStream);
                     var signer = new Signer(package, new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl))));
 
                     // This command overwrites by default, like signtool
@@ -93,7 +91,6 @@ namespace NuGetKeyVaultSignTool
                     await signer.SignAsync(request, new NullLogger(), CancellationToken.None);
                 }
 
-                OverwritePackage(tempFilePath, file);
             }
             catch (Exception e)
             {
@@ -101,21 +98,10 @@ namespace NuGetKeyVaultSignTool
                 Console.Error.WriteLine(e.StackTrace);
                 return -1;
             }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(tempFilePath))
-                        File.Delete(tempFilePath);
-                }
-                catch
-                { 
-                }
-            }
 
             return 0;
-            }
-        
+        }
+
 
         static string CopyPackage(string sourceFilePath)
         {
