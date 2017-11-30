@@ -26,15 +26,40 @@ namespace NuGetKeyVaultSignTool
 
         public async Task<bool> VerifyAsync(string file)
         {
+
+            var trustProviders = SignatureVerificationProviderFactory.GetSignatureVerificationProviders();
+            var verifier = new PackageSignatureVerifier(trustProviders, SignedPackageVerifierSettings.RequireSigned);
             try
             {
+                var result = 0;
                 using (var package = new PackageArchiveReader(file))
                 {
+                    var verificationResult = await verifier.VerifySignaturesAsync(package, new NullLogger(), CancellationToken.None);
 
-                    var verifier = new PackageSignatureVerifier(new ISignatureVerificationProvider[] { new X509SignatureVerificationProvider() }, SignedPackageVerifierSettings.RequireSigned);
 
-                    var result = await verifier.VerifySignaturesAsync(package, new NullLogger(), CancellationToken.None);
-                    return result.Valid;
+                    if (verificationResult.Valid)
+                    {
+                        return verificationResult.Valid;
+                    }
+                    else
+                    {
+                        var logMessages = verificationResult.Results.SelectMany(p => p.Issues).Select(p => p.ToLogMessage()).ToList();
+                        foreach (var msg in logMessages)
+                        {
+                            Console.WriteLine(msg.Message);
+                        }
+                        if (logMessages.Any(m => m.Level >= LogLevel.Warning))
+                        {
+                            var errors = logMessages.Where(m => m.Level == LogLevel.Error).Count();
+                            var warnings = logMessages.Where(m => m.Level == LogLevel.Warning).Count();
+
+                            Console.WriteLine($"Finished with {errors} errors and {warnings} warnings.");
+
+                            result = errors;
+                        }
+                        return false;
+                    }
+
                 }
             }
             catch (Exception e)
