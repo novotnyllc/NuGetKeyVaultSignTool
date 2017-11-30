@@ -79,17 +79,30 @@ namespace NuGetKeyVaultSignTool
                 TimestampHashAlgorithm = timestampeHashAlgorithm
             };
 
+            string tempFilePath = null;
             try
             {
-                using (var packageWriteStream = File.Open(file, FileMode.Open))
-                {
-                    var package = new SignedPackageArchive(packageWriteStream, packageWriteStream);
-                    var signer = new Signer(package, new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl))));
+                tempFilePath = CopyPackage(file);
+                var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
 
-                    // This command overwrites by default, like signtool
+                // remove first to overwrite
+                // This command overwrites by default, like signtool
+                using (var packageWriteStream = File.Open(tempFilePath, FileMode.Open))
+                using (var package = new SignedPackageArchive(packageWriteStream))
+                {
+                    var signer = new Signer(package, signatureProvider);
                     await signer.RemoveSignaturesAsync(new NullLogger(), CancellationToken.None);
+                }
+
+                // Now sign
+                using (var packageWriteStream = File.Open(tempFilePath, FileMode.Open))
+                using (var package = new SignedPackageArchive(packageWriteStream))
+                {
+                    var signer = new Signer(package, signatureProvider);
                     await signer.SignAsync(request, new NullLogger(), CancellationToken.None);
                 }
+
+                OverwritePackage(tempFilePath, file);
 
             }
             catch (Exception e)
@@ -97,6 +110,16 @@ namespace NuGetKeyVaultSignTool
                 Console.Error.WriteLine(e.Message);
                 Console.Error.WriteLine(e.StackTrace);
                 return -1;
+            }
+            finally
+            {
+                try
+                {
+                    FileUtility.Delete(tempFilePath);
+                }
+                catch
+                {
+                }
             }
 
             return 0;
