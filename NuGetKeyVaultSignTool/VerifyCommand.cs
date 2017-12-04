@@ -34,7 +34,7 @@ namespace NuGetKeyVaultSignTool
                 var result = 0;
                 using (var package = new PackageArchiveReader(file))
                 {
-                    var verificationResult = await verifier.VerifySignaturesAsync(package, new NullLogger(), CancellationToken.None);
+                    var verificationResult = await verifier.VerifySignaturesAsync(package, CancellationToken.None);
 
 
                     if (verificationResult.Valid)
