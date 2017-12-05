@@ -26,16 +26,16 @@ namespace NuGetKeyVaultSignTool
             this.timestampProvider = timestampProvider ?? throw new ArgumentNullException(nameof(timestampProvider));
         }
 
-        public async Task<Signature> CreateSignatureAsync(SignPackageRequest request, SignatureManifest signatureManifest, ILogger logger, CancellationToken token)
+        public async Task<Signature> CreateSignatureAsync(SignPackageRequest request, SignatureContent signatureContent, ILogger logger, CancellationToken token)
         {
             if (request == null)
             {
                 throw new ArgumentNullException(nameof(request));
             }
 
-            if (signatureManifest == null)
+            if (signatureContent == null)
             {
-                throw new ArgumentNullException(nameof(signatureManifest));
+                throw new ArgumentNullException(nameof(signatureContent));
             }
 
             if (logger == null)
@@ -43,13 +43,13 @@ namespace NuGetKeyVaultSignTool
                 throw new ArgumentNullException(nameof(logger));
             }
 
-            var authorSignature = CreateKeyVaultSignature(request.Certificate, signatureManifest);
+            var authorSignature = CreateKeyVaultSignature(request.Certificate, signatureContent);
             var timestamped = await TimestampSignature(request, logger, authorSignature, token);
 
             return timestamped;
         }
 
-        byte[] CreateKeyVaultSignature(X509Certificate2 publicCert, SignatureManifest signatureManifest)
+        byte[] CreateKeyVaultSignature(X509Certificate2 publicCert, SignatureContent signatureContent)
         {
             var chain = new X509Chain();
             chain.Build(publicCert);
@@ -72,7 +72,7 @@ namespace NuGetKeyVaultSignTool
             generator.AddSignerInfoGenerator(b);
             generator.AddCertificates(store);
 
-            var msg = new CmsProcessableByteArray(signatureManifest.GetBytes());
+            var msg = new CmsProcessableByteArray(signatureContent.GetBytes());
             var data = generator.Generate(msg, true);
 
             var encoded = data.GetEncoded();
