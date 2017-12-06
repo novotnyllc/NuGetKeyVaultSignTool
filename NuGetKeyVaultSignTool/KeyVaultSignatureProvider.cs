@@ -73,8 +73,10 @@ namespace NuGetKeyVaultSignTool
             // CommitmentTypeIdentifier attribute
             var attr = new Org.BouncyCastle.Asn1.Cms.Attribute(new DerObjectIdentifier(Oids.CommitmentTypeIndication), new DerSet(cti));
 
-            var asnvect = new Asn1EncodableVector();
-            asnvect.Add(attr);
+            var asnvect = new Asn1EncodableVector
+            {
+                attr
+            };
             var attribTable = new AttributeTable(asnvect);
 
 
