@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 using NuGet.Common;
 using NuGet.Packaging.Signing;
 using NuGetKeyVaultSignTool.BouncyCastle;
+using Org.BouncyCastle.Asn1;
+using Org.BouncyCastle.Asn1.Cms;
+using Org.BouncyCastle.Asn1.Esf;
 using Org.BouncyCastle.Cms;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509.Store;
@@ -43,13 +46,13 @@ namespace NuGetKeyVaultSignTool
                 throw new ArgumentNullException(nameof(logger));
             }
 
-            var authorSignature = CreateKeyVaultSignature(request.Certificate, signatureContent);
+            var authorSignature = CreateKeyVaultSignature(request.Certificate, signatureContent, request.SignatureType);
             var timestamped = await TimestampSignature(request, logger, authorSignature, token);
 
             return timestamped;
         }
 
-        byte[] CreateKeyVaultSignature(X509Certificate2 publicCert, SignatureContent signatureContent)
+        byte[] CreateKeyVaultSignature(X509Certificate2 publicCert, SignatureContent signatureContent, SignatureType signatureType)
         {
             var chain = new X509Chain();
             chain.Build(publicCert);
@@ -65,12 +68,23 @@ namespace NuGetKeyVaultSignTool
 
             var store = X509StoreFactory.Create("Certificate/Collection", new X509CollectionStoreParameters(additionals));
 
+            var cti = new CommitmentTypeIndication(new DerObjectIdentifier(AttributeUtility.GetSignatureTypeOid(signatureType)));
+
+            // CommitmentTypeIdentifier attribute
+            var attr = new Org.BouncyCastle.Asn1.Cms.Attribute(new DerObjectIdentifier(Oids.CommitmentTypeIndication), new DerSet(cti));
+
+            var asnvect = new Asn1EncodableVector();
+            asnvect.Add(attr);
+            var attribTable = new AttributeTable(asnvect);
+
+
             var generator = new CmsSignedDataGenerator();
             var builder = new SignerInfoGeneratorBuilder();
-            
+            builder.WithSignedAttributeGenerator(new DefaultSignedAttributeTableGenerator(attribTable));
             var b = builder.Build(new RsaSignatureFactory("SHA256WITHRSA", provider), bcCer);
             generator.AddSignerInfoGenerator(b);
             generator.AddCertificates(store);
+            
 
             var msg = new CmsProcessableByteArray(signatureContent.GetBytes());
             var data = generator.Generate(msg, true);

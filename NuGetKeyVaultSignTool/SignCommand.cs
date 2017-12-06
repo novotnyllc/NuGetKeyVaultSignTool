@@ -30,6 +30,7 @@ namespace NuGetKeyVaultSignTool
                                          string timestampUrl,
                                          HashAlgorithmName signatureHashAlgorithm,
                                          HashAlgorithmName timestampeHashAlgorithm,
+                                         SignatureType signatureType,
                                          string keyVaultCertificateName,
                                          string keyVaultUrl,
                                          string keyVaultClientId,
@@ -76,7 +77,8 @@ namespace NuGetKeyVaultSignTool
             {
                 Certificate = cert,
                 SignatureHashAlgorithm = signatureHashAlgorithm,
-                TimestampHashAlgorithm = timestampeHashAlgorithm
+                TimestampHashAlgorithm = timestampeHashAlgorithm,
+                SignatureType = signatureType
             };
 
             string tempFilePath = null;
