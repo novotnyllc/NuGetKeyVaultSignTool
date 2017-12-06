@@ -15,6 +15,7 @@ using Org.BouncyCastle.Asn1.Esf;
 using Org.BouncyCastle.Cms;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509.Store;
+using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace NuGetKeyVaultSignTool
 {
@@ -54,15 +55,29 @@ namespace NuGetKeyVaultSignTool
 
         byte[] CreateKeyVaultSignature(X509Certificate2 publicCert, SignatureContent signatureContent, SignatureType signatureType)
         {
-            var chain = new X509Chain();
-            chain.Build(publicCert);
+            List<X509Certificate> additionals = new List<X509Certificate>();
+            using (var chain = new X509Chain())
+            {
+                SetCertBuildChainPolicy(chain, DateTime.Now);
+                if (chain.Build(publicCert))
+                {
+                    // Get the chain as bc certs
+                    additionals.AddRange(chain.ChainElements.Cast<X509ChainElement>()
+                                              .Select(ce => DotNetUtilities.FromX509Certificate(ce.Certificate)));
+                }
+                else
+                {
+                    foreach (var chainStatus in chain.ChainStatus)
+                    {
+                        if (chainStatus.Status != X509ChainStatusFlags.NoError)
+                        {
+                            throw new NuGet.Packaging.Signing.SignatureException($"Certificate chain validation failed with error: {chainStatus.Status}");
+                        }
+                    }
+                }
 
-            // Get the chain as bc certs
-            var additionals = chain.ChainElements.Cast<X509ChainElement>()
-                                   .Select(ce => DotNetUtilities.FromX509Certificate(ce.Certificate))
-                                   .ToList();
-
-            chain.Dispose();
+            }
+            
 
             var bcCer = DotNetUtilities.FromX509Certificate(publicCert);
 
@@ -109,5 +124,21 @@ namespace NuGetKeyVaultSignTool
 
             return timestampProvider.TimestampSignatureAsync(timestampRequest, logger, token);
         }
+
+        static void SetCertBuildChainPolicy(
+            X509Chain x509Chain,
+            DateTime verificationTime)
+        {
+            var policy = x509Chain.ChainPolicy;
+
+          
+            policy.ApplicationPolicy.Add(new Oid(Oids.CodeSigningEkuOid));
+            
+            policy.RevocationFlag = X509RevocationFlag.ExcludeRoot;
+            policy.RevocationMode = X509RevocationMode.Online;
+
+            policy.VerificationTime = verificationTime;
+        }
+
     }
 }
