@@ -24,13 +24,11 @@ namespace NuGetKeyVaultSignTool
     {
         private readonly RSA provider;
         private readonly ITimestampProvider timestampProvider;
-        private readonly bool testCert;
 
-        public KeyVaultSignatureProvider(RSA provider, ITimestampProvider timestampProvider, bool testCert)
+        public KeyVaultSignatureProvider(RSA provider, ITimestampProvider timestampProvider)
         {
             this.provider = provider;
             this.timestampProvider = timestampProvider ?? throw new ArgumentNullException(nameof(timestampProvider));
-            this.testCert = testCert;
         }
 
         public async Task<Signature> CreateSignatureAsync(SignPackageRequest request, SignatureContent signatureContent, ILogger logger, CancellationToken token)
@@ -61,18 +59,24 @@ namespace NuGetKeyVaultSignTool
             // Get the chain
             IReadOnlyList<X509Certificate2> certs;
 
-            if (!testCert)
+
+            using (var chain = new X509Chain())
             {
-                certs = SigningUtility.GetCertificateChain(request.Certificate, new X509Certificate2Collection());
-            }
-            else
-            {
-                certs = new List<X509Certificate2>
+                SetCertBuildChainPolicy(chain, DateTime.Now);
+                if (chain.Build(request.Certificate))
                 {
-                    request.Certificate
-                };
+                   certs = chain.ChainElements.OfType<X509ChainElement>().Select(ele => ele.Certificate).ToList();
+                }
+                else
+                { 
+                    // This may be a test root cert
+                    certs = new List<X509Certificate2>
+                    {
+                        request.Certificate
+                    };
+                }
             }
-                
+
             // Get the chain as bc certs
             var additionals = certs.Select(DotNetUtilities.FromX509Certificate).ToList();
             var bcCer = DotNetUtilities.FromX509Certificate(request.Certificate);
@@ -152,6 +156,20 @@ namespace NuGetKeyVaultSignTool
             return timestampProvider.TimestampSignatureAsync(timestampRequest, logger, token);
         }
 
+
+        internal static void SetCertBuildChainPolicy(
+            X509Chain x509Chain,
+            DateTime verificationTime)
+        {
+            var policy = x509Chain.ChainPolicy;
+            
+            policy.ApplicationPolicy.Add(new Oid(Oids.CodeSigningEkuOid));
+
+            policy.RevocationFlag = X509RevocationFlag.ExcludeRoot;
+            policy.RevocationMode = X509RevocationMode.Online;
+
+            policy.VerificationTime = verificationTime;
+        }
 
     }
 }
