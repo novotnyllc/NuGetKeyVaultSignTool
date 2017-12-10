@@ -24,11 +24,13 @@ namespace NuGetKeyVaultSignTool
     {
         private readonly RSA provider;
         private readonly ITimestampProvider timestampProvider;
+        private readonly bool testCert;
 
-        public KeyVaultSignatureProvider(RSA provider, ITimestampProvider timestampProvider)
+        public KeyVaultSignatureProvider(RSA provider, ITimestampProvider timestampProvider, bool testCert)
         {
             this.provider = provider;
             this.timestampProvider = timestampProvider ?? throw new ArgumentNullException(nameof(timestampProvider));
+            this.testCert = testCert;
         }
 
         public async Task<Signature> CreateSignatureAsync(SignPackageRequest request, SignatureContent signatureContent, ILogger logger, CancellationToken token)
@@ -57,7 +59,19 @@ namespace NuGetKeyVaultSignTool
         byte[] CreateKeyVaultSignature(SignPackageRequest request, SignatureContent signatureContent, SignatureType signatureType)
         {
             // Get the chain
-            var certs = SigningUtility.GetCertificateChain(request.Certificate, new X509Certificate2Collection());
+            IReadOnlyList<X509Certificate2> certs;
+
+            if (!testCert)
+            {
+                certs = SigningUtility.GetCertificateChain(request.Certificate, new X509Certificate2Collection());
+            }
+            else
+            {
+                certs = new List<X509Certificate2>
+                {
+                    request.Certificate
+                };
+            }
                 
             // Get the chain as bc certs
             var additionals = certs.Select(DotNetUtilities.FromX509Certificate).ToList();

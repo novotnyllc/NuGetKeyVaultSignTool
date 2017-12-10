@@ -31,6 +31,7 @@ namespace NuGetKeyVaultSignTool
                                          HashAlgorithmName signatureHashAlgorithm,
                                          HashAlgorithmName timestampeHashAlgorithm,
                                          SignatureType signatureType,
+                                         bool testCert,
                                          string keyVaultCertificateName,
                                          string keyVaultUrl,
                                          string keyVaultClientId,
@@ -85,7 +86,7 @@ namespace NuGetKeyVaultSignTool
             try
             {
                 tempFilePath = CopyPackage(file);
-                var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
+                var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)), testCert);
 
                 // remove first to overwrite
                 // This command overwrites by default, like signtool
