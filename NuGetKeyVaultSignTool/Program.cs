@@ -17,8 +17,9 @@ namespace NuGetKeyVaultSignTool
                 signConfiguration.Description = "Signs NuGet packages with the specified Key Vault certificate.";
                 signConfiguration.HelpOption("-? | -h | --help");
 
-                var file = signConfiguration.Argument("file", "File to sign.");
-
+                var packagePath = signConfiguration.Argument("packagePath", "Package to sign.");
+                var outputPath = signConfiguration.Option("-o | --output", "The output file. If omitted, overwrites input.", CommandOptionType.SingleValue);
+                var force = signConfiguration.Option("-f | --force", "Overwrites a sigature if it exists.", CommandOptionType.NoValue);
                 var fileDigestAlgorithm = signConfiguration.Option("-fd | --file-digest", "The digest algorithm to hash the file with.", CommandOptionType.SingleValue);
                 var rfc3161TimeStamp = signConfiguration.Option("-tr | --timestamp-rfc3161", "Specifies the RFC 3161 timestamp server's URL. If this option (or -t) is not specified, the signed file will not be timestamped.", CommandOptionType.SingleValue);
                 var rfc3161Digest = signConfiguration.Option("-td | --timestamp-digest", "Used with the -tr switch to request a digest algorithm used by the RFC 3161 timestamp server.", CommandOptionType.SingleValue);
@@ -31,7 +32,7 @@ namespace NuGetKeyVaultSignTool
 
                 signConfiguration.OnExecute(() =>
                 {
-                    if (string.IsNullOrWhiteSpace(file.Value))
+                    if (string.IsNullOrWhiteSpace(packagePath.Value))
                     {
                         application.Error.WriteLine("All arguments are required");
                         return Task.FromResult(-1);
@@ -66,12 +67,17 @@ namespace NuGetKeyVaultSignTool
                     var timeHashAlg = GetValueFromOption(rfc3161Digest, AlgorithmFromInput, HashAlgorithmName.SHA256);
                     var sigType = GetValueFromOption(signatureType, SignatureTypeFromInput, SignatureType.Author);
 
+
+                    var output = string.IsNullOrWhiteSpace(outputPath.Value()) ? packagePath.Value : outputPath.Value();
+
                     var cmd = new SignCommand(application);
-                    return cmd.SignAsync(file.Value,
+                    return cmd.SignAsync(packagePath.Value,
+                                         output,
                                          rfc3161TimeStamp.Value(),
                                          sigHashAlg,
                                          timeHashAlg,
                                          sigType,
+                                         force.HasValue(),
                                          azureKeyVaultCertificateName.Value(),
                                          azureKeyVaultUrl.Value(),
                                          azureKeyVaultClientId.Value(),

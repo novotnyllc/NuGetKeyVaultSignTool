@@ -26,11 +26,13 @@ namespace NuGetKeyVaultSignTool
             this.application = application;
         }
 
-        public async Task<int> SignAsync(string file,
+        public async Task<int> SignAsync(string packagePath,
+                                         string outputPath,
                                          string timestampUrl,
                                          HashAlgorithmName signatureHashAlgorithm,
                                          HashAlgorithmName timestampeHashAlgorithm,
                                          SignatureType signatureType,
+                                         bool overwrite,
                                          string keyVaultCertificateName,
                                          string keyVaultUrl,
                                          string keyVaultClientId,
@@ -81,30 +83,28 @@ namespace NuGetKeyVaultSignTool
                 SignatureType = signatureType
             };
 
-            string tempFilePath = null;
+            var logger = new NullLogger();
+            var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
+
+            string originalPackageCopyPath = null;
             try
             {
-                tempFilePath = CopyPackage(file);
-                var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
+                originalPackageCopyPath = CopyPackage(packagePath);
 
-                // remove first to overwrite
-                // This command overwrites by default, like signtool
-                using (var packageWriteStream = File.Open(tempFilePath, FileMode.Open))
-                using (var package = new SignedPackageArchive(packageWriteStream))
+                // For overwrite we need to first remove the signature and then sign the unsigned package
+                if (overwrite)
                 {
-                    var signer = new Signer(package, signatureProvider);
-                    await signer.RemoveSignaturesAsync(new NullLogger(), CancellationToken.None);
-                }
+                    originalPackageCopyPath = CopyPackage(packagePath);
 
-                // Now sign
-                using (var packageWriteStream = File.Open(tempFilePath, FileMode.Open))
-                using (var package = new SignedPackageArchive(packageWriteStream))
+                    await RemoveSignatureAsync(logger, signatureProvider, packagePath, originalPackageCopyPath, CancellationToken.None);
+                    await AddSignatureAndUpdatePackageAsync(logger, signatureProvider, request, originalPackageCopyPath, outputPath, CancellationToken.None);
+
+                    FileUtility.Delete(originalPackageCopyPath);
+                }
+                else
                 {
-                    var signer = new Signer(package, signatureProvider);
-                    await signer.SignAsync(request, new NullLogger(), CancellationToken.None);
+                    await AddSignatureAndUpdatePackageAsync(logger, signatureProvider, request, packagePath, outputPath, CancellationToken.None);
                 }
-
-                OverwritePackage(tempFilePath, file);
 
             }
             catch (Exception e)
@@ -117,7 +117,7 @@ namespace NuGetKeyVaultSignTool
             {
                 try
                 {
-                    FileUtility.Delete(tempFilePath);
+                    FileUtility.Delete(originalPackageCopyPath);
                 }
                 catch
                 {
@@ -125,6 +125,44 @@ namespace NuGetKeyVaultSignTool
             }
 
             return 0;
+        }
+
+        static async Task AddSignatureAndUpdatePackageAsync(
+            ILogger logger,
+            ISignatureProvider signatureProvider,
+            SignPackageRequest request,
+            string packagePath,
+            string outputPath,
+            CancellationToken token)
+        {
+            var originalPackageCopyPath = CopyPackage(packagePath);
+
+            using (var packageReadStream = File.OpenRead(packagePath))
+            using (var packageWriteStream = File.Open(originalPackageCopyPath, FileMode.Open))
+            using (var package = new SignedPackageArchive(packageReadStream, packageWriteStream))
+            {
+                var signer = new Signer(package, signatureProvider);
+                await signer.SignAsync(request, logger, token);
+            }
+
+            OverwritePackage(originalPackageCopyPath, outputPath);
+            FileUtility.Delete(originalPackageCopyPath);
+        }
+
+        static async Task RemoveSignatureAsync(
+            ILogger logger,
+            ISignatureProvider signatureProvider,
+            string packagePath,
+            string originalPackageCopyPath,
+            CancellationToken token)
+        {
+            using (var packageReadStream = File.OpenRead(packagePath))
+            using (var packageWriteStream = File.Open(originalPackageCopyPath, FileMode.Open))
+            using (var package = new SignedPackageArchive(packageReadStream, packageWriteStream))
+            {
+                var signer = new Signer(package, signatureProvider);
+                await signer.RemoveSignaturesAsync(logger, token);
+            }
         }
 
 
