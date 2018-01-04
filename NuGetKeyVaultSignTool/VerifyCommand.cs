@@ -28,7 +28,7 @@ namespace NuGetKeyVaultSignTool
         {
 
             var trustProviders = SignatureVerificationProviderFactory.GetSignatureVerificationProviders();
-            var verifier = new PackageSignatureVerifier(trustProviders, SignedPackageVerifierSettings.RequireSigned);
+            var verifier = new PackageSignatureVerifier(trustProviders, SignedPackageVerifierSettings.VerifyCommandDefaultPolicy);
             try
             {
                 var result = 0;
