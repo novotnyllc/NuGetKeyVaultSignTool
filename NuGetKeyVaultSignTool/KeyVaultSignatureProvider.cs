@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -11,12 +10,12 @@ using NuGet.Common;
 using NuGet.Packaging.Signing;
 using NuGetKeyVaultSignTool.BouncyCastle;
 using Org.BouncyCastle.Asn1;
-using Org.BouncyCastle.Asn1.Esf;
 using Org.BouncyCastle.Cms;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509.Extension;
 using Org.BouncyCastle.X509.Store;
 using AttributeTable = Org.BouncyCastle.Asn1.Cms.AttributeTable;
+using HashAlgorithmName = NuGet.Common.HashAlgorithmName;
 
 namespace NuGetKeyVaultSignTool
 {
@@ -81,16 +80,16 @@ namespace NuGetKeyVaultSignTool
             var additionals = certs.Select(DotNetUtilities.FromX509Certificate).ToList();
             var bcCer = DotNetUtilities.FromX509Certificate(request.Certificate);
             var store = X509StoreFactory.Create("Certificate/Collection", new X509CollectionStoreParameters(additionals));
-
-
             
+            
+            var cti = AttributeUtility.GetCommitmentTypeIndication(signatureType);
+            var cv2 = AttributeUtility.GetSigningCertificateV2(certs, HashAlgorithmName.SHA256);
 
-            // Attributes
-            var cti = new CommitmentTypeIndication(new DerObjectIdentifier(AttributeUtility.GetSignatureTypeOid(signatureType)));
-
-            // CommitmentTypeIdentifier attribute
-            var attr = new Org.BouncyCastle.Asn1.Cms.Attribute(new DerObjectIdentifier(Oids.CommitmentTypeIndication), new DerSet(cti));
-            var attribTable = new AttributeTable(new Asn1EncodableVector { attr });
+            var attribTable = new AttributeTable(new Asn1EncodableVector
+            {
+                ToBcAttribute(cti),
+                ToBcAttribute(cv2)
+            });
 
             // SignerInfo generator setup
             var signerInfoGeneratorBuilder = new SignerInfoGeneratorBuilder()
@@ -124,6 +123,16 @@ namespace NuGetKeyVaultSignTool
 
             var encoded = data.GetEncoded();
             return encoded;
+        }
+
+        Org.BouncyCastle.Asn1.Cms.Attribute ToBcAttribute(CryptographicAttributeObject obj)
+        {
+            var encodables = obj.Values.Cast<AsnEncodedData>().Select(d => Asn1Object.FromByteArray(d.RawData)).ToArray();
+            var derSet = new DerSet(encodables);
+
+            var attr = new Org.BouncyCastle.Asn1.Cms.Attribute(new DerObjectIdentifier(obj.Oid.Value), derSet);
+
+            return attr;
         }
 
         static string HashAlgorithmToBouncyCastle(NuGet.Common.HashAlgorithmName algorithmName)

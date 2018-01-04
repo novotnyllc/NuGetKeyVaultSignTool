@@ -30,7 +30,7 @@ namespace NuGetKeyVaultSignTool
                                          string outputPath,
                                          string timestampUrl,
                                          HashAlgorithmName signatureHashAlgorithm,
-                                         HashAlgorithmName timestampeHashAlgorithm,
+                                         HashAlgorithmName timestampHashAlgorithm,
                                          SignatureType signatureType,
                                          bool overwrite,
                                          string keyVaultCertificateName,
@@ -75,14 +75,7 @@ namespace NuGetKeyVaultSignTool
             var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
 
             // TODO: Add Hash Alg choice
-            var request = new SignPackageRequest()
-            {
-                Certificate = cert,
-                SignatureHashAlgorithm = signatureHashAlgorithm,
-                TimestampHashAlgorithm = timestampeHashAlgorithm,
-                SignatureType = signatureType
-            };
-
+            var request = new SignPackageRequest(cert, signatureHashAlgorithm, timestampHashAlgorithm);
             var logger = new NullLogger();
             var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
 
