@@ -82,8 +82,8 @@ namespace NuGetKeyVaultSignTool
             var store = X509StoreFactory.Create("Certificate/Collection", new X509CollectionStoreParameters(additionals));
             
             
-            var cti = AttributeUtility.GetCommitmentTypeIndication(signatureType);
-            var cv2 = AttributeUtility.GetSigningCertificateV2(certs, HashAlgorithmName.SHA256);
+            var cti = AttributeUtility.CreateCommitmentTypeIndication(signatureType);
+            var cv2 = AttributeUtility.CreateSigningCertificateV2(request.Certificate, request.SignatureHashAlgorithm);
 
             var attribTable = new AttributeTable(new Asn1EncodableVector
             {
@@ -157,7 +157,6 @@ namespace NuGetKeyVaultSignTool
             var timestampRequest = new TimestampRequest
             {
                 SignatureValue = signature,
-                Certificate = request.Certificate,
                 SigningSpec = SigningSpecifications.V1,
                 TimestampHashAlgorithm = request.TimestampHashAlgorithm
             };
@@ -172,7 +171,7 @@ namespace NuGetKeyVaultSignTool
         {
             var policy = x509Chain.ChainPolicy;
             
-            policy.ApplicationPolicy.Add(new Oid(Oids.CodeSigningEkuOid));
+            policy.ApplicationPolicy.Add(new Oid(Oids.CodeSigningEku));
 
             policy.RevocationFlag = X509RevocationFlag.ExcludeRoot;
             policy.RevocationMode = X509RevocationMode.Online;
