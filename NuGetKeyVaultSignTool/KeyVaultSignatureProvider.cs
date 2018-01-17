@@ -64,7 +64,10 @@ namespace NuGetKeyVaultSignTool
                 SetCertBuildChainPolicy(chain, DateTime.Now);
                 if (chain.Build(request.Certificate))
                 {
-                   certs = chain.ChainElements.OfType<X509ChainElement>().Select(ele => ele.Certificate).ToList();
+                   certs = chain.ChainElements.
+                                 OfType<X509ChainElement>()
+                                .Select(ele => ele.Certificate)
+                                .ToList();
                 }
                 else
                 { 
@@ -75,33 +78,24 @@ namespace NuGetKeyVaultSignTool
                     };
                 }
             }
-
-            // Get the chain as bc certs
-            var additionals = certs.Select(DotNetUtilities.FromX509Certificate).ToList();
-            var bcCer = DotNetUtilities.FromX509Certificate(request.Certificate);
-            var store = X509StoreFactory.Create("Certificate/Collection", new X509CollectionStoreParameters(additionals));
             
-            
-            var cti = AttributeUtility.CreateCommitmentTypeIndication(signatureType);
-            var cv2 = AttributeUtility.CreateSigningCertificateV2(request.Certificate, request.SignatureHashAlgorithm);
+            var attribs = SigningUtility.CreateSignedAttributes(request, certs);
 
-            var attribTable = new AttributeTable(new Asn1EncodableVector
-            {
-                ToBcAttribute(cti),
-                ToBcAttribute(cv2)
-            });
-
+            // Convert .NET crypto attributes to Bouncy Castle
+            var attribTable = new AttributeTable(new Asn1EncodableVector(attribs.Cast<CryptographicAttributeObject>()
+                                                                                .Select(ToBcAttribute)
+                                                                                .ToArray()));
             // SignerInfo generator setup
             var signerInfoGeneratorBuilder = new SignerInfoGeneratorBuilder()
                 .WithSignedAttributeGenerator(new DefaultSignedAttributeTableGenerator(attribTable));
-            
+
 
             // Subject Key Identifier (SKI) is smaller and less prone to accidental matching than issuer and serial
             // number.  However, to ensure cross-platform verification, SKI should only be used if the certificate
             // has the SKI extension attribute.
 
             // Try to look for the value 
-            
+            var bcCer = DotNetUtilities.FromX509Certificate(request.Certificate);
             var ext = bcCer.GetExtensionValue(new DerObjectIdentifier(Oids.SubjectKeyIdentifier));
             SignerInfoGenerator signerInfoGenerator;
             if (ext != null)
@@ -116,7 +110,11 @@ namespace NuGetKeyVaultSignTool
             var generator = new CmsSignedDataGenerator();
             
             generator.AddSignerInfoGenerator(signerInfoGenerator);
-            generator.AddCertificates(store);
+
+            // Get the chain as bc certs
+            generator.AddCertificates(X509StoreFactory.Create("Certificate/Collection", 
+                                                              new X509CollectionStoreParameters(certs.Select(DotNetUtilities.FromX509Certificate).
+                                                                                                      ToList())));
             
             var msg = new CmsProcessableByteArray(signatureContent.GetBytes());
             var data = generator.Generate(msg, true);
@@ -165,7 +163,7 @@ namespace NuGetKeyVaultSignTool
         }
 
 
-        internal static void SetCertBuildChainPolicy(
+        static void SetCertBuildChainPolicy(
             X509Chain x509Chain,
             DateTime verificationTime)
         {
