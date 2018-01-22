@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -73,9 +74,19 @@ namespace NuGetKeyVaultSignTool
 
 
             var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
-
-            // TODO: Add Hash Alg choice
+            
             var request = new SignPackageRequest(cert, signatureHashAlgorithm, timestampHashAlgorithm);
+            
+            // if cert is self-signed, put an empty collection in the Chain property
+            if (cert.IsSelfSigned())
+            {
+                var setter = typeof(SignPackageRequest).GetProperty("Chain", BindingFlags.Instance | BindingFlags.NonPublic)
+                                                       .GetSetMethod(true);
+
+                setter.Invoke(request, new object[] {new List<X509Certificate2>{cert}});
+            }
+
+
             var logger = new NullLogger();
             var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
 

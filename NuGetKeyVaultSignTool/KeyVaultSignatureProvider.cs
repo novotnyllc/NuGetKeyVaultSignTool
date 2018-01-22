@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -15,7 +16,6 @@ using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509.Extension;
 using Org.BouncyCastle.X509.Store;
 using AttributeTable = Org.BouncyCastle.Asn1.Cms.AttributeTable;
-using HashAlgorithmName = NuGet.Common.HashAlgorithmName;
 
 namespace NuGetKeyVaultSignTool
 {
@@ -56,28 +56,12 @@ namespace NuGetKeyVaultSignTool
         byte[] CreateKeyVaultSignature(SignPackageRequest request, SignatureContent signatureContent, SignatureType signatureType)
         {
             // Get the chain
-            IReadOnlyList<X509Certificate2> certs;
 
+            var getter = typeof(SignPackageRequest).GetProperty("Chain", BindingFlags.Instance | BindingFlags.NonPublic)
+                                                   .GetGetMethod(true);
 
-            using (var chain = new X509Chain())
-            {
-                SetCertBuildChainPolicy(chain, DateTime.Now);
-                if (chain.Build(request.Certificate))
-                {
-                   certs = chain.ChainElements.
-                                 OfType<X509ChainElement>()
-                                .Select(ele => ele.Certificate)
-                                .ToList();
-                }
-                else
-                { 
-                    // This may be a test root cert
-                    certs = new List<X509Certificate2>
-                    {
-                        request.Certificate
-                    };
-                }
-            }
+            var certs = (IReadOnlyList<X509Certificate2>)getter.Invoke(request, null);
+            
             
             var attribs = SigningUtility.CreateSignedAttributes(request, certs);
 
@@ -149,7 +133,6 @@ namespace NuGetKeyVaultSignTool
             }
         }
 
-
         Task<Signature> TimestampSignature(SignPackageRequest request, ILogger logger, byte[] signature, CancellationToken token)
         {
             var timestampRequest = new TimestampRequest
@@ -161,21 +144,5 @@ namespace NuGetKeyVaultSignTool
 
             return timestampProvider.TimestampSignatureAsync(timestampRequest, logger, token);
         }
-
-
-        static void SetCertBuildChainPolicy(
-            X509Chain x509Chain,
-            DateTime verificationTime)
-        {
-            var policy = x509Chain.ChainPolicy;
-            
-            policy.ApplicationPolicy.Add(new Oid(Oids.CodeSigningEku));
-
-            policy.RevocationFlag = X509RevocationFlag.ExcludeRoot;
-            policy.RevocationMode = X509RevocationMode.Online;
-
-            policy.VerificationTime = verificationTime;
-        }
-
     }
 }
