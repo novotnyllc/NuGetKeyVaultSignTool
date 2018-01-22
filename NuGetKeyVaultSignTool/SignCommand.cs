@@ -77,7 +77,7 @@ namespace NuGetKeyVaultSignTool
             
             var request = new SignPackageRequest(cert, signatureHashAlgorithm, timestampHashAlgorithm);
             
-            // if cert is self-signed, put an empty collection in the Chain property
+            // if cert is self-signed, put an it as the sole cert in the Chain property
             if (cert.IsSelfSigned())
             {
                 var setter = typeof(SignPackageRequest).GetProperty("Chain", BindingFlags.Instance | BindingFlags.NonPublic)
