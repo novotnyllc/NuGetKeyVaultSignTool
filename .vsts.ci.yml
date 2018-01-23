@@ -16,7 +16,9 @@ steps:
 
 - powershell: |    
     mkdir $(Build.ArtifactStagingDirectory)\Logs 
-    dotnet pack .\NuGetKeyVaultSignTool\NuGetKeyVaultSignTool.csproj -c $(BuildConfiguration) /p:PackageOutputPath=$(Build.ArtifactStagingDirectory)\Artifacts /bl:$(Build.ArtifactStagingDirectory)\Logs\msbuild.binlog
+
+    msbuild .\NuGetKeyVaultSignTool\NuGetKeyVaultSignTool.csproj /t:restore /bl:$(Build.ArtifactStagingDirectory)\Logs\restore.binlog
+    msbuild .\NuGetKeyVaultSignTool\NuGetKeyVaultSignTool.csproj /t:Pack /p:Configuration=$(BuildConfiguration) /p:PackageOutputPath=$(Build.ArtifactStagingDirectory)\Artifacts /bl:$(Build.ArtifactStagingDirectory)\Logs\build.binlog
         
   displayName: Build
   
