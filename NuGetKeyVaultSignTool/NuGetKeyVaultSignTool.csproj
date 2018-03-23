@@ -34,7 +34,7 @@
 
   <Target Name="CustomContentTarget">
     <ItemGroup>
-      <TfmSpecificPackageFile Include="bin\$(Configuration)\$(TargetFramework)\*.*" PackagePath="tools" />
+      <TfmSpecificPackageFile Include="bin\$(Configuration)\$(TargetFramework)\*.*" PackagePath="tools\$(TargetFramework)" />
     </ItemGroup>
   </Target>
 </Project>
