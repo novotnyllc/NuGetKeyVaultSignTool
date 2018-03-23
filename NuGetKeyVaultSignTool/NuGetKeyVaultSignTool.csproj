@@ -22,7 +22,7 @@
     <PackageReference Include="Microsoft.Extensions.CommandLineUtils" Version="1.1.1" PrivateAssets="all" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.4" PrivateAssets="all" />
     <PackageReference Include="RSAKeyVaultProvider" Version="1.0.1" PrivateAssets="all" />
-    <PackageReference Include="NuGet.Packaging" Version="4.6.1" PrivateAssets="all" />
+    <PackageReference Include="NuGet.Packaging" Version="4.7.0-preview1-4986" PrivateAssets="all" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Security" />
   </ItemGroup>

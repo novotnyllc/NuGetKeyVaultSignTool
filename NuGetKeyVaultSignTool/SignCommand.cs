@@ -75,7 +75,7 @@ namespace NuGetKeyVaultSignTool
 
             var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
             
-            var request = new SignPackageRequest(cert, signatureHashAlgorithm, timestampHashAlgorithm);
+            var request = new AuthorSignPackageRequest(cert, signatureHashAlgorithm, timestampHashAlgorithm);
             
             // if cert is self-signed, put an it as the sole cert in the Chain property
             if (cert.IsSelfSigned())

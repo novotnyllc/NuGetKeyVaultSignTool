@@ -30,7 +30,7 @@ namespace NuGetKeyVaultSignTool
             this.timestampProvider = timestampProvider ?? throw new ArgumentNullException(nameof(timestampProvider));
         }
 
-        public async Task<Signature> CreateSignatureAsync(SignPackageRequest request, SignatureContent signatureContent, ILogger logger, CancellationToken token)
+        public async Task<PrimarySignature> CreatePrimarySignatureAsync(SignPackageRequest request, SignatureContent signatureContent, ILogger logger, CancellationToken token)
         {
             if (request == null)
             {
@@ -133,16 +133,16 @@ namespace NuGetKeyVaultSignTool
             }
         }
 
-        Task<Signature> TimestampSignature(SignPackageRequest request, ILogger logger, byte[] signature, CancellationToken token)
+        Task<PrimarySignature> TimestampSignature(SignPackageRequest request, ILogger logger, byte[] signature, CancellationToken token)
         {
             var timestampRequest = new TimestampRequest
             {
-                SignatureValue = signature,
+                Signature = signature,
                 SigningSpec = SigningSpecifications.V1,
                 TimestampHashAlgorithm = request.TimestampHashAlgorithm
             };
 
-            return timestampProvider.TimestampSignatureAsync(timestampRequest, logger, token);
+            return timestampProvider.TimestampPrimarySignatureAsync(timestampRequest, logger, token);
         }
     }
 }

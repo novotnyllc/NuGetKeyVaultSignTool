@@ -23,7 +23,7 @@ namespace NuGetKeyVaultSignTool
                 var fileDigestAlgorithm = signConfiguration.Option("-fd | --file-digest", "The digest algorithm to hash the file with.", CommandOptionType.SingleValue);
                 var rfc3161TimeStamp = signConfiguration.Option("-tr | --timestamp-rfc3161", "Specifies the RFC 3161 timestamp server's URL. If this option (or -t) is not specified, the signed file will not be timestamped.", CommandOptionType.SingleValue);
                 var rfc3161Digest = signConfiguration.Option("-td | --timestamp-digest", "Used with the -tr switch to request a digest algorithm used by the RFC 3161 timestamp server.", CommandOptionType.SingleValue);
-                var signatureType = signConfiguration.Option("-st | --signature-type", "The signature type (omit for author, default).", CommandOptionType.SingleValue);
+                var signatureType = signConfiguration.Option("-st | --signature-type", "The signature type (omit for author, default. Only author is supported currently).", CommandOptionType.SingleValue);
                 var azureKeyVaultUrl = signConfiguration.Option("-kvu | --azure-key-vault-url", "The URL to an Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultClientId = signConfiguration.Option("-kvi | --azure-key-vault-client-id", "The Client ID to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultClientSecret = signConfiguration.Option("-kvs | --azure-key-vault-client-secret", "The Client Secret to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
@@ -66,6 +66,12 @@ namespace NuGetKeyVaultSignTool
                     var sigHashAlg = GetValueFromOption(fileDigestAlgorithm, AlgorithmFromInput, HashAlgorithmName.SHA256);
                     var timeHashAlg = GetValueFromOption(rfc3161Digest, AlgorithmFromInput, HashAlgorithmName.SHA256);
                     var sigType = GetValueFromOption(signatureType, SignatureTypeFromInput, SignatureType.Author);
+
+                    if (sigType != SignatureType.Author)
+                    {
+                        application.Error.WriteLine("Only author signatures are currently supported.");
+                        return Task.FromResult(-1);
+                    }
 
 
                     var output = string.IsNullOrWhiteSpace(outputPath.Value()) ? packagePath.Value : outputPath.Value();
