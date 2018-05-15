@@ -47,13 +47,18 @@ namespace NuGetKeyVaultSignTool
                 throw new ArgumentNullException(nameof(logger));
             }
 
-            var authorSignature = CreateKeyVaultSignature(request, signatureContent, request.SignatureType);
-            var timestamped = await TimestampSignature(request, logger, authorSignature, token);
+            var authorSignature = CreateKeyVaultPrimarySignature(request, signatureContent, request.SignatureType);
+            var timestamped = await TimestampPrimarySignatureAsync(request, logger, authorSignature, token);
 
             return timestamped;
         }
 
-        byte[] CreateKeyVaultSignature(SignPackageRequest request, SignatureContent signatureContent, SignatureType signatureType)
+        public Task<PrimarySignature> CreateRepositoryCountersignatureAsync(RepositorySignPackageRequest request, PrimarySignature primarySignature, ILogger logger, CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
+
+        PrimarySignature CreateKeyVaultPrimarySignature(SignPackageRequest request, SignatureContent signatureContent, SignatureType signatureType)
         {
             // Get the chain
 
@@ -104,7 +109,7 @@ namespace NuGetKeyVaultSignTool
             var data = generator.Generate(msg, true);
 
             var encoded = data.GetEncoded();
-            return encoded;
+            return PrimarySignature.Load(encoded);
         }
 
         Org.BouncyCastle.Asn1.Cms.Attribute ToBcAttribute(CryptographicAttributeObject obj)
@@ -133,16 +138,19 @@ namespace NuGetKeyVaultSignTool
             }
         }
 
-        Task<PrimarySignature> TimestampSignature(SignPackageRequest request, ILogger logger, byte[] signature, CancellationToken token)
+        Task<PrimarySignature> TimestampPrimarySignatureAsync(SignPackageRequest request, ILogger logger, PrimarySignature signature, CancellationToken token)
         {
-            var timestampRequest = new TimestampRequest
-            {
-                Signature = signature,
-                SigningSpec = SigningSpecifications.V1,
-                TimestampHashAlgorithm = request.TimestampHashAlgorithm
-            };
+            var signatureValue = signature.GetSignatureValue();
+            var messageHash = request.TimestampHashAlgorithm.ComputeHash(signatureValue);
 
-            return timestampProvider.TimestampPrimarySignatureAsync(timestampRequest, logger, token);
+            var timestampRequest = new TimestampRequest(
+                signingSpecifications: SigningSpecifications.V1,
+                hashedMessage: messageHash,
+                hashAlgorithm: request.TimestampHashAlgorithm,
+                target: SignaturePlacement.PrimarySignature
+            );
+
+            return timestampProvider.TimestampSignatureAsync(signature, timestampRequest, logger, token);
         }
     }
 }

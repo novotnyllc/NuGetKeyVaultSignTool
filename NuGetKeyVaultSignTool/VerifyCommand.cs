@@ -28,13 +28,13 @@ namespace NuGetKeyVaultSignTool
         {
 
             var trustProviders = SignatureVerificationProviderFactory.GetSignatureVerificationProviders();
-            var verifier = new PackageSignatureVerifier(trustProviders, SignedPackageVerifierSettings.VerifyCommandDefaultPolicy);
+            var verifier = new PackageSignatureVerifier(trustProviders);
             try
             {
                 var result = 0;
                 using (var package = new PackageArchiveReader(file))
                 {
-                    var verificationResult = await verifier.VerifySignaturesAsync(package, CancellationToken.None);
+                    var verificationResult = await verifier.VerifySignaturesAsync(package, SignedPackageVerifierSettings.GetVerifyCommandDefaultPolicy(), CancellationToken.None);
 
 
                     if (verificationResult.Valid)

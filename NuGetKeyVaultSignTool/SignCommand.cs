@@ -74,42 +74,19 @@ namespace NuGetKeyVaultSignTool
 
 
             var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
-            
-            var request = new AuthorSignPackageRequest(cert, signatureHashAlgorithm, timestampHashAlgorithm);
-            
-            // if cert is self-signed, put an it as the sole cert in the Chain property
-            if (cert.IsSelfSigned())
-            {
-                var setter = typeof(SignPackageRequest).GetProperty("Chain", BindingFlags.Instance | BindingFlags.NonPublic)
-                                                       .GetSetMethod(true);
-
-                setter.Invoke(request, new object[] {new List<X509Certificate2>{cert}});
-            }
-
-
-            var logger = new NullLogger();
             var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
+
+            var request = new AuthorSignPackageRequest(cert, signatureHashAlgorithm, timestampHashAlgorithm);
 
             string originalPackageCopyPath = null;
             try
             {
                 originalPackageCopyPath = CopyPackage(packagePath);
 
-                // For overwrite we need to first remove the signature and then sign the unsigned package
-                if (overwrite)
+                using (var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, NullLogger.Instance))
                 {
-                    originalPackageCopyPath = CopyPackage(packagePath);
-
-                    await RemoveSignatureAsync(logger, signatureProvider, packagePath, originalPackageCopyPath, CancellationToken.None);
-                    await AddSignatureAndUpdatePackageAsync(logger, signatureProvider, request, originalPackageCopyPath, outputPath, CancellationToken.None);
-
-                    FileUtility.Delete(originalPackageCopyPath);
+                    await SigningUtility.SignAsync(options, request, CancellationToken.None);
                 }
-                else
-                {
-                    await AddSignatureAndUpdatePackageAsync(logger, signatureProvider, request, packagePath, outputPath, CancellationToken.None);
-                }
-
             }
             catch (Exception e)
             {
@@ -130,46 +107,7 @@ namespace NuGetKeyVaultSignTool
 
             return 0;
         }
-
-        static async Task AddSignatureAndUpdatePackageAsync(
-            ILogger logger,
-            ISignatureProvider signatureProvider,
-            SignPackageRequest request,
-            string packagePath,
-            string outputPath,
-            CancellationToken token)
-        {
-            var originalPackageCopyPath = CopyPackage(packagePath);
-
-            using (var packageReadStream = File.OpenRead(packagePath))
-            using (var packageWriteStream = File.Open(originalPackageCopyPath, FileMode.Open))
-            using (var package = new SignedPackageArchive(packageReadStream, packageWriteStream))
-            {
-                var signer = new Signer(package, signatureProvider);
-                await signer.SignAsync(request, logger, token);
-            }
-
-            OverwritePackage(originalPackageCopyPath, outputPath);
-            FileUtility.Delete(originalPackageCopyPath);
-        }
-
-        static async Task RemoveSignatureAsync(
-            ILogger logger,
-            ISignatureProvider signatureProvider,
-            string packagePath,
-            string originalPackageCopyPath,
-            CancellationToken token)
-        {
-            using (var packageReadStream = File.OpenRead(packagePath))
-            using (var packageWriteStream = File.Open(originalPackageCopyPath, FileMode.Open))
-            using (var package = new SignedPackageArchive(packageReadStream, packageWriteStream))
-            {
-                var signer = new Signer(package, signatureProvider);
-                await signer.RemoveSignaturesAsync(logger, token);
-            }
-        }
-
-
+        
         static string CopyPackage(string sourceFilePath)
         {
             var destFilePath = Path.GetTempFileName();
