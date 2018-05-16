@@ -15,9 +15,7 @@ steps:
     versionSpec: 4.7.0
 
 - powershell: |    
-    mkdir $(Build.ArtifactStagingDirectory)\Logs 
-
-    msbuild .\NuGetKeyVaultSignTool\NuGetKeyVaultSignTool.csproj /restore /t:Pack /p:Configuration=$(BuildConfiguration) /p:PackageOutputPath=$(Build.ArtifactStagingDirectory)\Artifacts /bl:$(Build.ArtifactStagingDirectory)\Logs\build.binlog
+    msbuild .\NuGetKeyVaultSignTool\NuGetKeyVaultSignTool.csproj /restore /t:Pack /p:Configuration=$(BuildConfiguration) /p:PackageOutputPath=$(Build.ArtifactStagingDirectory)\Artifacts
         
   displayName: Build
   
@@ -37,13 +35,4 @@ steps:
     pathToPublish: $(Build.ArtifactStagingDirectory)\Artifacts
     artifactType: container
     artifactName: Artifacts
-  condition: always()
-
-
-- task: PublishBuildArtifacts@1
-  displayName: Publish Log Artifacts
-  inputs:
-    pathToPublish: $(Build.ArtifactStagingDirectory)\Logs
-    artifactType: container
-    artifactName: Logs
   condition: always()
