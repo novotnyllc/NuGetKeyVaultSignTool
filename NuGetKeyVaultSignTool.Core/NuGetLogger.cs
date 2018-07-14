@@ -10,15 +10,17 @@ namespace NuGetKeyVaultSignTool
 	class NuGetLogger : NuGet.Common.ILogger
 	{
         readonly ILogger logger;
+        private readonly string fileName;
 
-        public NuGetLogger(ILogger logger)
+        public NuGetLogger(ILogger logger, string fileName)
 	    {
             this.logger = logger;
+            this.fileName = fileName;
         }
 
         public void Log(NuGet.Common.LogLevel level, string data)
         {
-            logger.Log(ConvertLevel(level), data);
+            logger.Log(ConvertLevel(level), $"NuGet [{fileName}]: {data}");
         }
 
         public void Log(ILogMessage message)

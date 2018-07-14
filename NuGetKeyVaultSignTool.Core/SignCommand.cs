@@ -76,6 +76,8 @@ namespace NuGetKeyVaultSignTool
 
         public async Task<bool> SignAsync(string packagePath, string outputPath, string timestampUrl, HashAlgorithmName signatureHashAlgorithm, HashAlgorithmName timestampHashAlgorithm, bool overwrite, X509Certificate2 publicCertificate, System.Security.Cryptography.RSA rsa)
         {
+            var fileName = Path.GetFileName(packagePath);
+            logger.LogInformation($"{nameof(SignAsync)} [{fileName}]: Begin Signing {packagePath}");
             var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
 
             var request = new AuthorSignPackageRequest(publicCertificate, signatureHashAlgorithm, timestampHashAlgorithm);
@@ -85,7 +87,7 @@ namespace NuGetKeyVaultSignTool
             {
                 originalPackageCopyPath = CopyPackage(packagePath);
 
-                using (var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, new NuGetLogger(logger)))
+                using (var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, new NuGetLogger(logger, fileName)))
                 {
                     await SigningUtility.SignAsync(options, request, CancellationToken.None);
                 }
@@ -104,6 +106,8 @@ namespace NuGetKeyVaultSignTool
                 catch
                 {
                 }
+
+                logger.LogInformation($"{nameof(SignAsync)} [{fileName}]: End Signing {packagePath}");
             }
 
             return true;
