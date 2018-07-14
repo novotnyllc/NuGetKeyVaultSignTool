@@ -23,13 +23,10 @@
     <PackageReference Include="Microsoft.Azure.KeyVault" Version="3.0.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="3.19.8" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.CommandLineUtils" Version="1.1.1" PrivateAssets="all" />
+    <PackageReference Include="NuGet.Packaging" Version="5.0.0-xprivate001.13074" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.2" PrivateAssets="all" />
     <PackageReference Include="RSAKeyVaultProvider" Version="1.0.1" PrivateAssets="all" />
     
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\NuGet\src\NuGet.Core\NuGet.Packaging\NuGet.Packaging.csproj" />
   </ItemGroup>
   
   
