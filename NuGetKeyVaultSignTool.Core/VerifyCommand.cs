@@ -8,7 +8,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.CommandLineUtils;
 using NuGet.Common;
 using NuGet.Packaging;
 using NuGet.Packaging.Signing;
@@ -17,7 +16,7 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace NuGetKeyVaultSignTool
 {
-    class VerifyCommand
+    public class VerifyCommand
     {
         readonly ILogger logger;
         

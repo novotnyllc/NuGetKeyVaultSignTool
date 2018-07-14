@@ -13,7 +13,7 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace NuGetKeyVaultSignTool
 {
-    class SignCommand
+    public class SignCommand
     {
         readonly ILogger logger;
         
