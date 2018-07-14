@@ -8,10 +8,11 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0EA31384-26D1-401E-84F6-72ED7CD30C36}"
 	ProjectSection(SolutionItems) = preProject
 		.vsts.ci.yml = .vsts.ci.yml
+		Directory.Build.Props = Directory.Build.Props
 		version.json = version.json
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NuGetKeyVaultSignTool.Core", "NuGetKeyVaultSignTool.Core\NuGetKeyVaultSignTool.Core.csproj", "{A3A203E1-122F-4575-95F4-BED746D98B05}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NuGetKeyVaultSignTool.Core", "NuGetKeyVaultSignTool.Core\NuGetKeyVaultSignTool.Core.csproj", "{A3A203E1-122F-4575-95F4-BED746D98B05}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
