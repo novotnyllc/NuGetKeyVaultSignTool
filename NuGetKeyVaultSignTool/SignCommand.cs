@@ -33,7 +33,9 @@ namespace NuGetKeyVaultSignTool
                                          string keyVaultUrl,
                                          string keyVaultClientId,
                                          string keyVaultClientSecret,
-                                         string keyVaultAccessToken)
+                                         string keyVaultAccessToken,
+                                         X509Certificate2 publicCertificate = null,
+                                         KeyIdentifier keyIdentifier = null)
         {
             string validatedToken = null;
 
@@ -60,18 +62,20 @@ namespace NuGetKeyVaultSignTool
 
             var client = new KeyVaultClient(Authenticate, new HttpClient());
 
-            // We call this here to verify it's a valid cert
-            // It also implicitly validates the access token or credentials
-            var kvcert = await client.GetCertificateAsync(keyVaultUrl, keyVaultCertificateName)
-                                     .ConfigureAwait(false);
-            var cert = new X509Certificate2(kvcert.Cer);
-
-
-
-            var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
+            if (publicCertificate != null && keyIdentifier != null)
+            {
+                // We call this here to verify it's a valid cert
+                // It also implicitly validates the access token or credentials
+                var kvcert = await client.GetCertificateAsync(keyVaultUrl, keyVaultCertificateName)
+                                         .ConfigureAwait(false);
+                publicCertificate = new X509Certificate2(kvcert.Cer);
+                keyIdentifier = kvcert.KeyIdentifier;
+            }
+            
+            var rsa = client.ToRSA(keyIdentifier, publicCertificate);
             var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
 
-            var request = new AuthorSignPackageRequest(cert, signatureHashAlgorithm, timestampHashAlgorithm);
+            var request = new AuthorSignPackageRequest(publicCertificate, signatureHashAlgorithm, timestampHashAlgorithm);
 
             string originalPackageCopyPath = null;
             try
