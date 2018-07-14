@@ -33,9 +33,7 @@ namespace NuGetKeyVaultSignTool
                                          string keyVaultUrl,
                                          string keyVaultClientId,
                                          string keyVaultClientSecret,
-                                         string keyVaultAccessToken,
-                                         X509Certificate2 publicCertificate = null,
-                                         KeyIdentifier keyIdentifier = null)
+                                         string keyVaultAccessToken)
         {
             string validatedToken = null;
 
@@ -62,17 +60,22 @@ namespace NuGetKeyVaultSignTool
 
             var client = new KeyVaultClient(Authenticate, new HttpClient());
 
-            if (publicCertificate == null || keyIdentifier == null)
-            {
-                // We call this here to verify it's a valid cert
-                // It also implicitly validates the access token or credentials
-                var kvcert = await client.GetCertificateAsync(keyVaultUrl, keyVaultCertificateName)
-                                         .ConfigureAwait(false);
-                publicCertificate = new X509Certificate2(kvcert.Cer);
-                keyIdentifier = kvcert.KeyIdentifier;
-            }
-            
+
+            // We call this here to verify it's a valid cert
+            // It also implicitly validates the access token or credentials
+            var kvcert = await client.GetCertificateAsync(keyVaultUrl, keyVaultCertificateName)
+                                     .ConfigureAwait(false);
+            var publicCertificate = new X509Certificate2(kvcert.Cer);
+            var keyIdentifier = kvcert.KeyIdentifier;
+
+
             var rsa = client.ToRSA(keyIdentifier, publicCertificate);
+
+            return await SignAsync(packagePath, outputPath, timestampUrl, signatureHashAlgorithm, timestampHashAlgorithm, overwrite, publicCertificate, rsa);
+        }
+
+        public async Task<bool> SignAsync(string packagePath, string outputPath, string timestampUrl, HashAlgorithmName signatureHashAlgorithm, HashAlgorithmName timestampHashAlgorithm, bool overwrite, X509Certificate2 publicCertificate, System.Security.Cryptography.RSA rsa)
+        {
             var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
 
             var request = new AuthorSignPackageRequest(publicCertificate, signatureHashAlgorithm, timestampHashAlgorithm);
@@ -105,7 +108,8 @@ namespace NuGetKeyVaultSignTool
 
             return true;
         }
-        
+
+
         static string CopyPackage(string sourceFilePath)
         {
             var destFilePath = Path.GetTempFileName();
