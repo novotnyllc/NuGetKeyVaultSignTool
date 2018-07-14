@@ -62,7 +62,7 @@ namespace NuGetKeyVaultSignTool
 
             var client = new KeyVaultClient(Authenticate, new HttpClient());
 
-            if (publicCertificate != null && keyIdentifier != null)
+            if (publicCertificate == null || keyIdentifier == null)
             {
                 // We call this here to verify it's a valid cert
                 // It also implicitly validates the access token or credentials
@@ -82,7 +82,7 @@ namespace NuGetKeyVaultSignTool
             {
                 originalPackageCopyPath = CopyPackage(packagePath);
 
-                using (var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, NullLogger.Instance))
+                using (var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, new NuGetLogger(logger)))
                 {
                     await SigningUtility.SignAsync(options, request, CancellationToken.None);
                 }
