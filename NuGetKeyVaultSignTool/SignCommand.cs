@@ -1,33 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
-using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.KeyVault;
-using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
+using Microsoft.Extensions.Logging;
 using NuGet.Common;
 using NuGet.Packaging.Signing;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace NuGetKeyVaultSignTool
 {
     class SignCommand
     {
-        readonly CommandLineApplication application;
+        readonly ILogger logger;
         
-        public SignCommand(CommandLineApplication application)
+        public SignCommand(ILogger logger)
         {
-            this.application = application;
+            this.logger = logger;
         }
 
-        public async Task<int> SignAsync(string packagePath,
+        public async Task<bool> SignAsync(string packagePath,
                                          string outputPath,
                                          string timestampUrl,
                                          HashAlgorithmName signatureHashAlgorithm,
@@ -90,9 +85,8 @@ namespace NuGetKeyVaultSignTool
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine(e.Message);
-                Console.Error.WriteLine(e.StackTrace);
-                return -1;
+                logger.LogError(e, e.Message);
+                return false;
             }
             finally
             {
@@ -105,7 +99,7 @@ namespace NuGetKeyVaultSignTool
                 }
             }
 
-            return 0;
+            return true;
         }
         
         static string CopyPackage(string sourceFilePath)

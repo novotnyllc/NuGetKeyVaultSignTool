@@ -1,9 +1,12 @@
 ﻿using Microsoft.Extensions.CommandLineUtils;
 using System;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using NuGet.Common;
 using NuGet.Packaging.Signing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace NuGetKeyVaultSignTool
 {
@@ -11,6 +14,15 @@ namespace NuGetKeyVaultSignTool
     {
         internal static int Main(string[] args)
         {
+
+            var serviceCollection = new ServiceCollection()
+                .AddLogging(builder =>
+                {
+                    builder.AddConsole();
+                });
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+            var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+
             var application = new CommandLineApplication(throwOnUnexpectedArg: false);
             var signCommand = application.Command("sign", throwOnUnexpectedArg: false, configuration: signConfiguration =>
             {
@@ -30,37 +42,37 @@ namespace NuGetKeyVaultSignTool
                 var azureKeyVaultCertificateName = signConfiguration.Option("-kvc | --azure-key-vault-certificate", "The name of the certificate in Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultAccessToken = signConfiguration.Option("-kva | --azure-key-vault-accesstoken", "The Access Token to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
 
-                signConfiguration.OnExecute(() =>
+                signConfiguration.OnExecute(async () =>
                 {
                     if (string.IsNullOrWhiteSpace(packagePath.Value))
                     {
-                        application.Error.WriteLine("All arguments are required");
-                        return Task.FromResult(-1);
+                        logger.LogError("All arguments are required");
+                        return -1;
                     }
 
                     if (!azureKeyVaultUrl.HasValue())
                     {
-                        application.Error.WriteLine("Key Vault URL not specified");
-                        return Task.FromResult(-1);
+                        logger.LogError("Key Vault URL not specified");
+                        return -1;
                     }
 
                     if (!azureKeyVaultCertificateName.HasValue())
                     {
-                        application.Error.WriteLine("Certificate name not specified");
-                        return Task.FromResult(-1);
+                        logger.LogError("Certificate name not specified");
+                        return -1;
                     }
 
                     if (!rfc3161TimeStamp.HasValue())
                     {
-                        application.Error.WriteLine("Timestamp url not specified");
-                        return Task.FromResult(-1);
+                        logger.LogError("Timestamp url not specified");
+                        return -1;
                     }
 
                     var valid = (azureKeyVaultAccessToken.HasValue() || (azureKeyVaultClientId.HasValue() && azureKeyVaultClientSecret.HasValue()));
                     if (!valid)
                     {
-                        application.Error.WriteLine("Either access token or clientId and client secret must be specified");
-                        return Task.FromResult(-1);
+                        logger.LogError("Either access token or clientId and client secret must be specified");
+                        return -1;
                     }
 
                     var sigHashAlg = GetValueFromOption(fileDigestAlgorithm, AlgorithmFromInput, HashAlgorithmName.SHA256);
@@ -69,15 +81,14 @@ namespace NuGetKeyVaultSignTool
 
                     if (sigType != SignatureType.Author)
                     {
-                        application.Error.WriteLine("Only author signatures are currently supported.");
-                        return Task.FromResult(-1);
+                        logger.LogError("Only author signatures are currently supported.");
+                        return -1;
                     }
-
 
                     var output = string.IsNullOrWhiteSpace(outputPath.Value()) ? packagePath.Value : outputPath.Value();
 
-                    var cmd = new SignCommand(application);
-                    return cmd.SignAsync(packagePath.Value,
+                    var cmd = new SignCommand(logger);
+                    var  result = await cmd.SignAsync(packagePath.Value,
                                          output,
                                          rfc3161TimeStamp.Value(),
                                          sigHashAlg,
@@ -89,6 +100,8 @@ namespace NuGetKeyVaultSignTool
                                          azureKeyVaultClientId.Value(),
                                          azureKeyVaultClientSecret.Value(),
                                          azureKeyVaultAccessToken.Value());
+
+                    return result ? 0 : -1;
                 });
             }
             );
@@ -115,8 +128,10 @@ namespace NuGetKeyVaultSignTool
                         return -1;
                     }
 
-                    var cmd = new VerifyCommand(application);
-                    var result = await cmd.VerifyAsync(file.Value);
+                    var cmd = new VerifyCommand(logger);
+                    var buffer = new StringBuilder();
+                    var result = await cmd.VerifyAsync(file.Value, buffer);
+                    Console.WriteLine(buffer.ToString());
                     if (result)
                     {
                         Console.WriteLine("Signature is valid");
