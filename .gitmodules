@@ -1,0 +1,3 @@
+[submodule "NuGet"]
+	path = NuGet
+	url = https://github.com/onovotny/NuGet.Client
