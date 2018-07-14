@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <PackageAsTool>true</PackageAsTool>
+    <PackAsTool>true</PackAsTool>
     <Authors>Oren Novotny</Authors>
     <Copyright>Copyright (C) Oren Novotny</Copyright>
     <Description>Enables NuGet package signing using certificates in Azure Key Vault</Description>
@@ -13,7 +13,8 @@
     <PackageOutputPath>$(MSBuildThisFileDirectory)..\artifacts\</PackageOutputPath>
     <DefineConstants>$(DefineConstants);HAS_SIGNING</DefineConstants>
     <!--<IncludeBuildOutput>false</IncludeBuildOutput>-->
-  </PropertyGroup>
+  
+</PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Nerdbank.GitVersioning" Version="2.1.65" PrivateAssets="all">
