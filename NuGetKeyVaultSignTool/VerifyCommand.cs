@@ -43,7 +43,7 @@ namespace NuGetKeyVaultSignTool
                     }
                     else
                     {
-                        var logMessages = verificationResult.Results.SelectMany(p => p.Issues).Select(p => p.ToLogMessage()).ToList();
+                        var logMessages = verificationResult.Results.SelectMany(p => p.Issues).Select(p => p .AsRestoreLogMessage()).ToList();
                         foreach (var msg in logMessages)
                         {
                             Console.WriteLine(msg.Message);
