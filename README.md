@@ -5,19 +5,22 @@ This tool adds [code signatures to a NuGet package](https://docs.microsoft.com/e
 
 # Getting started
 
-The tool can be downloaded from [GitHub releases](https://github.com/onovotny/NuGetKeyVaultSignTool/releases) or from [NuGet.org](https://www.nuget.org/packages/NuGetKeyVaultSignTool/).
+This tool is a .NET Core global tool. It can be installed with `dotnet tool install --global NuGetKeyVaultSignTool` 
 
 Example:
 ```ps1
-# Download and extract the tool
-Invoke-WebRequest https://www.nuget.org/api/v2/package/NuGetKeyVaultSignTool/1.1.4 -OutFile nkvsigntool.zip
-Expand-Archive nkvsigntool.zip -DestinationPath ./
+# Install the tool
+dotnet tool install --global NuGetKeyVaultSignTool
+
+# Alternatively, install the tool locally
+# dotnet tool install --tool-path . NuGetKeyVaultSignTool
+
 
 # Produce a package
 & dotnet pack src/MyLibrary/
 
 # Execute code signing
-& ./tools/net471/NuGetKeyVaultSignTool.exe sign MyLibrary.1.0.0.nupkg `
+& NuGetKeyVaultSignTool sign MyLibrary.1.0.0.nupkg `
   --file-digest sha256 `
   --timestamp-rfc3161 http://timestamp.digicert.com `
   --timestamp-digest sha256 `
@@ -57,7 +60,7 @@ Options:
 
 Verifies that a NuGet package has been code-signed.
 
-Usage: `NuGetKeyVaultSignTool.exe verify [options] <FILE_PATH>`
+Usage: `NuGetKeyVaultSignTool verify [options] <FILE_PATH>`
 
 FILE_PATH = the path to the .nupkg file produced by `dotnet pack` or `nuget.exe pack`.
 
