@@ -1,4 +1,10 @@
-queue: "Hosted VS2017"
+trigger:
+  - master
+  - rel/*
+
+pool:
+  vmImage: vs2017-win2016
+
 variables: 
   BuildConfiguration: Release
 
@@ -32,6 +38,7 @@ steps:
     SignClientUser: $(SignClientUser)
     SignClientSecret: $(SignClientSecret)
     ArtifactDirectory: $(Build.ArtifactStagingDirectory)\Artifacts
+  condition: and(succeeded(), not(eq(variables['build.reason'], 'PullRequest')), not(eq(variables['SignClientSecret'], '')), not(eq(variables['SignClientUser'], '')))
 
 - task: PublishBuildArtifacts@1
   displayName: Publish Build Artifacts
