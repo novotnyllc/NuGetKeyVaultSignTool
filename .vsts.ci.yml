@@ -1,24 +1,28 @@
 queue: "Hosted VS2017"
 variables: 
   BuildConfiguration: Release
+
 steps:
-- task: BatchScript@1
+- task: DotNetCoreCLI@2  
   inputs:
-    filename: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\Common7\\Tools\\VsDevCmd.bat"
-    arguments: -no_logo
-    modifyEnvironment: true
-  displayName: Setup Environment Variables
+    command: custom
+    custom: tool
+    arguments: install --tool-path . nbgv
+  displayName: Install NBGV tool
+  condition: and(succeeded(), eq(variables['system.pullrequest.isfork'], false))
 
-- task: NuGetToolInstaller@0
-  displayName: Use NuGet 4.7
+- script: nbgv cloud
+  displayName: Set Version
+  condition: and(succeeded(), eq(variables['system.pullrequest.isfork'], false))
+
+- task: DotNetCoreCLI@2
   inputs:
-    versionSpec: 4.7.0
-
-- powershell: |    
-    msbuild .\NuGetKeyVaultSignTool\NuGetKeyVaultSignTool.csproj /restore /t:Pack /p:Configuration=$(BuildConfiguration) /p:PackageOutputPath=$(Build.ArtifactStagingDirectory)\Artifacts
-        
-  displayName: Build
-  
+    command: pack
+    packagesToPack: '**/*.csproj'
+    configuration: $(BuildConfiguration)
+    packDirectory: $(Build.ArtifactStagingDirectory)\Artifacts    
+    verbosityPack: Minimal
+  displayName: Pack  
     
 - task: PowerShell@2
   displayName: Authenticode Sign artifacts
@@ -35,4 +39,4 @@ steps:
     pathToPublish: $(Build.ArtifactStagingDirectory)\Artifacts
     artifactType: container
     artifactName: Artifacts
-  condition: always()
+  condition: and(succeeded(), eq(variables['system.pullrequest.isfork'], false))

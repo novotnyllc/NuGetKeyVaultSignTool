@@ -7,11 +7,5 @@
   ],
   "nugetPackageVersion":{
     "semVer": 2
-  },
-  "cloudBuild": {
-    "buildNumber": {
-      "enabled": true,
-      "setVersionVariables": true
-    }
   }
 }

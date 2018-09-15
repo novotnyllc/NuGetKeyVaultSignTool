@@ -7,7 +7,7 @@ if([string]::IsNullOrEmpty($Env:SignClientSecret)){
 	return;
 }
 
-& nuget install SignClient -Version 0.9.1 -SolutionDir "$currentDirectory\..\" -Verbosity quiet -ExcludeVersion
+dotnet tool install --tool-path . SignClient
 
 # Setup Variables we need to pass into the sign client tool
 
@@ -21,7 +21,7 @@ $nupkgs = gci $Env:ArtifactDirectory\*.nupkg -recurse | Select -ExpandProperty F
 foreach ($nupkg in $nupkgs){
 	Write-Host "Submitting $nupkg for signing"
 
-	dotnet $appPath 'sign' -c $appSettings -i $nupkg -f $fileList -r $Env:SignClientUser -s $Env:SignClientSecret -n 'NuGetKeyVaultSignTool' -d 'NuGetKeyVaultSignTool' -u 'https://github.com/onovotny/NuGetKeyVaultSignTool' 
+	.\SignClient 'sign' -c $appSettings -i $nupkg -f $fileList -r $Env:SignClientUser -s $Env:SignClientSecret -n 'NuGetKeyVaultSignTool' -d 'NuGetKeyVaultSignTool' -u 'https://github.com/onovotny/NuGetKeyVaultSignTool' 
 
 	Write-Host "Finished signing $nupkg"
 }

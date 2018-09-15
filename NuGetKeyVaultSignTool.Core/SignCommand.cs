@@ -1,33 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
-using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.KeyVault;
-using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
+using Microsoft.Extensions.Logging;
 using NuGet.Common;
 using NuGet.Packaging.Signing;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace NuGetKeyVaultSignTool
 {
-    class SignCommand
+    public class SignCommand
     {
-        readonly CommandLineApplication application;
+        readonly ILogger logger;
         
-        public SignCommand(CommandLineApplication application)
+        public SignCommand(ILogger logger)
         {
-            this.application = application;
+            this.logger = logger;
         }
 
-        public async Task<int> SignAsync(string packagePath,
+        public async Task<bool> SignAsync(string packagePath,
                                          string outputPath,
                                          string timestampUrl,
                                          HashAlgorithmName signatureHashAlgorithm,
@@ -65,34 +60,42 @@ namespace NuGetKeyVaultSignTool
 
             var client = new KeyVaultClient(Authenticate, new HttpClient());
 
+
             // We call this here to verify it's a valid cert
             // It also implicitly validates the access token or credentials
             var kvcert = await client.GetCertificateAsync(keyVaultUrl, keyVaultCertificateName)
                                      .ConfigureAwait(false);
-            var cert = new X509Certificate2(kvcert.Cer);
+            var publicCertificate = new X509Certificate2(kvcert.Cer);
+            var keyIdentifier = kvcert.KeyIdentifier;
 
 
+            var rsa = client.ToRSA(keyIdentifier, publicCertificate);
 
-            var rsa = client.ToRSA(kvcert.KeyIdentifier, cert);
+            return await SignAsync(packagePath, outputPath, timestampUrl, signatureHashAlgorithm, timestampHashAlgorithm, overwrite, publicCertificate, rsa);
+        }
+
+        public async Task<bool> SignAsync(string packagePath, string outputPath, string timestampUrl, HashAlgorithmName signatureHashAlgorithm, HashAlgorithmName timestampHashAlgorithm, bool overwrite, X509Certificate2 publicCertificate, System.Security.Cryptography.RSA rsa)
+        {
+            var fileName = Path.GetFileName(packagePath);
+            logger.LogInformation($"{nameof(SignAsync)} [{fileName}]: Begin Signing {packagePath}");
             var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
 
-            var request = new AuthorSignPackageRequest(cert, signatureHashAlgorithm, timestampHashAlgorithm);
+            var request = new AuthorSignPackageRequest(publicCertificate, signatureHashAlgorithm, timestampHashAlgorithm);
 
             string originalPackageCopyPath = null;
             try
             {
                 originalPackageCopyPath = CopyPackage(packagePath);
 
-                using (var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, NullLogger.Instance))
+                using (var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, new NuGetLogger(logger, fileName)))
                 {
                     await SigningUtility.SignAsync(options, request, CancellationToken.None);
                 }
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine(e.Message);
-                Console.Error.WriteLine(e.StackTrace);
-                return -1;
+                logger.LogError(e, e.Message);
+                return false;
             }
             finally
             {
@@ -103,11 +106,14 @@ namespace NuGetKeyVaultSignTool
                 catch
                 {
                 }
+
+                logger.LogInformation($"{nameof(SignAsync)} [{fileName}]: End Signing {packagePath}");
             }
 
-            return 0;
+            return true;
         }
-        
+
+
         static string CopyPackage(string sourceFilePath)
         {
             var destFilePath = Path.GetTempFileName();

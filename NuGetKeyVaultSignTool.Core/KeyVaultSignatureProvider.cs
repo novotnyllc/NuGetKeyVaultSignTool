@@ -47,8 +47,13 @@ namespace NuGetKeyVaultSignTool
                 throw new ArgumentNullException(nameof(logger));
             }
 
+            logger.LogInformation($"{nameof(CreatePrimarySignatureAsync)}: Creating Primary signature");
             var authorSignature = CreateKeyVaultPrimarySignature(request, signatureContent, request.SignatureType);
+            logger.LogInformation($"{nameof(CreatePrimarySignatureAsync)}: Primary signature completed");
+
+            logger.LogInformation($"{nameof(CreatePrimarySignatureAsync)}: Timestamp primary signature");
             var timestamped = await TimestampPrimarySignatureAsync(request, logger, authorSignature, token);
+            logger.LogInformation($"{nameof(CreatePrimarySignatureAsync)}: Timestamp completed");
 
             return timestamped;
         }
