@@ -113,7 +113,7 @@ namespace NuGetKeyVaultSignTool
             var msg = new CmsProcessableByteArray(signatureContent.GetBytes());
             var data = generator.Generate(msg, true);
 
-            var encoded = data.GetEncoded();
+            var encoded = data.ContentInfo.GetDerEncoded();
             return PrimarySignature.Load(encoded);
         }
 
