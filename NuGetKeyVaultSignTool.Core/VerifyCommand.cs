@@ -37,7 +37,12 @@ namespace NuGetKeyVaultSignTool
                 throw new ArgumentNullException(nameof(buffer));
             }
 
-            var trustProviders = SignatureVerificationProviderFactory.GetSignatureVerificationProviders();
+            
+            var trustProviders = new ISignatureVerificationProvider[]
+            {
+                new IntegrityVerificationProvider(),
+                new SignatureTrustAndValidityVerificationProvider()
+            };
             var verifier = new PackageSignatureVerifier(trustProviders);
             try
             {
@@ -47,9 +52,9 @@ namespace NuGetKeyVaultSignTool
                     var verificationResult = await verifier.VerifySignaturesAsync(package, SignedPackageVerifierSettings.GetVerifyCommandDefaultPolicy(), CancellationToken.None);
 
 
-                    if (verificationResult.Valid)
+                    if (verificationResult.IsValid)
                     {
-                        return verificationResult.Valid;
+                        return verificationResult.IsValid;
                     }
                     else
                     {
