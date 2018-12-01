@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
@@ -30,6 +31,8 @@ namespace NuGetKeyVaultSignTool
                                          HashAlgorithmName timestampHashAlgorithm,
                                          SignatureType signatureType,
                                          bool overwrite,
+                                         Uri v3ServiceIndexUrl,
+                                         IReadOnlyList<string> packageOwners,
                                          string keyVaultCertificateName,
                                          string keyVaultUrl,
                                          string keyVaultClientId,
@@ -72,16 +75,24 @@ namespace NuGetKeyVaultSignTool
 
             var rsa = client.ToRSA(keyIdentifier, publicCertificate);
 
-            return await SignAsync(packagePath, outputPath, timestampUrl, signatureHashAlgorithm, timestampHashAlgorithm, overwrite, publicCertificate, rsa);
+            return await SignAsync(packagePath, outputPath, timestampUrl, v3ServiceIndexUrl, packageOwners, signatureType, signatureHashAlgorithm, timestampHashAlgorithm, overwrite, publicCertificate, rsa);
         }
 
-        public async Task<bool> SignAsync(string packagePath, string outputPath, string timestampUrl, HashAlgorithmName signatureHashAlgorithm, HashAlgorithmName timestampHashAlgorithm, bool overwrite, X509Certificate2 publicCertificate, System.Security.Cryptography.RSA rsa)
+        public async Task<bool> SignAsync(string packagePath, string outputPath, string timestampUrl, Uri v3ServiceIndex, IReadOnlyList<string> packageOwners,
+                                          SignatureType signatureType, HashAlgorithmName signatureHashAlgorithm, HashAlgorithmName timestampHashAlgorithm, 
+                                          bool overwrite, X509Certificate2 publicCertificate, System.Security.Cryptography.RSA rsa)
         {
             var packagesToSign = LocalFolderUtility.ResolvePackageFromPath(packagePath);
             
             var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
 
-            var request = new AuthorSignPackageRequest(publicCertificate, signatureHashAlgorithm, timestampHashAlgorithm);
+            SignPackageRequest request = null;
+
+            if (signatureType == SignatureType.Author)
+                request = new AuthorSignPackageRequest(publicCertificate, signatureHashAlgorithm, timestampHashAlgorithm);
+            else if (signatureType == SignatureType.Repository)
+                request = new RepositorySignPackageRequest(publicCertificate, signatureHashAlgorithm, timestampHashAlgorithm, v3ServiceIndex, packageOwners);
+            else throw new ArgumentOutOfRangeException(nameof(signatureType));
 
             string originalPackageCopyPath = null;
             foreach (var package in packagesToSign)

@@ -56,9 +56,67 @@ namespace NuGetKeyVaultSignTool
             return timestamped;
         }
 
-        public Task<PrimarySignature> CreateRepositoryCountersignatureAsync(RepositorySignPackageRequest request, PrimarySignature primarySignature, ILogger logger, CancellationToken token)
+        public async Task<PrimarySignature> CreateRepositoryCountersignatureAsync(RepositorySignPackageRequest request, PrimarySignature primarySignature, ILogger logger, CancellationToken token)
         {
-            throw new NotImplementedException();
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            if (primarySignature == null)
+            {
+                throw new ArgumentNullException(nameof(primarySignature));
+            }
+
+            if (logger == null)
+            {
+                throw new ArgumentNullException(nameof(logger));
+            }
+
+            token.ThrowIfCancellationRequested();
+
+            var getter = typeof(SignPackageRequest).GetProperty("Chain", BindingFlags.Instance | BindingFlags.NonPublic)
+                                                   .GetGetMethod(true);
+
+            var certs = (IReadOnlyList<X509Certificate2>)getter.Invoke(request, null);
+
+            var cmsSigner = CreateCmsSigner(request, certs, logger);
+
+            logger.LogInformation($"{nameof(CreateRepositoryCountersignatureAsync)}: Creating Counter signature");
+            var signature = CreateKeyVaultRepositoryCountersignature(cmsSigner, request, primarySignature);
+            logger.LogInformation($"{nameof(CreateRepositoryCountersignatureAsync)}: Counter signature completed");
+            if (timestampProvider == null)
+            {
+                return signature;
+            }
+            else
+            {
+                logger.LogInformation($"{nameof(CreateRepositoryCountersignatureAsync)}: Timestamp Counter signature");
+                var timestamped = await TimestampRepositoryCountersignatureAsync(request, logger, signature, token).ConfigureAwait(false);
+                logger.LogInformation($"{nameof(CreateRepositoryCountersignatureAsync)}: Timestamp completed");
+                return timestamped;
+            }
+        }
+
+        PrimarySignature CreateKeyVaultRepositoryCountersignature(CmsSigner cmsSigner, SignPackageRequest request, PrimarySignature primarySignature)
+        {
+            var cms = new SignedCms();
+            cms.Decode(primarySignature.GetBytes());
+
+            try
+            {
+                cms.SignerInfos[0].ComputeCounterSignature(cmsSigner);
+            }
+            catch (CryptographicException ex) when (ex.HResult == INVALID_PROVIDER_TYPE_HRESULT)
+            {
+                var exceptionBuilder = new StringBuilder();
+                exceptionBuilder.AppendLine("Invalid provider type");
+                exceptionBuilder.AppendLine(CertificateUtility.X509Certificate2ToString(request.Certificate, NuGet.Common.HashAlgorithmName.SHA256));
+
+                throw new SignatureException(NuGetLogCode.NU3001, exceptionBuilder.ToString());
+            }
+
+            return PrimarySignature.Load(cms);
         }
 
         PrimarySignature CreateKeyVaultPrimarySignature(SignPackageRequest request, SignatureContent signatureContent, SignatureType signatureType, ILogger logger)
@@ -161,6 +219,22 @@ namespace NuGetKeyVaultSignTool
             );
 
             return timestampProvider.TimestampSignatureAsync(signature, timestampRequest, logger, token);
+        }
+
+        private Task<PrimarySignature> TimestampRepositoryCountersignatureAsync(SignPackageRequest request, ILogger logger, PrimarySignature primarySignature, CancellationToken token)
+        {
+            var repositoryCountersignature = RepositoryCountersignature.GetRepositoryCountersignature(primarySignature);
+            var signatureValue = repositoryCountersignature.GetSignatureValue();
+            var messageHash = request.TimestampHashAlgorithm.ComputeHash(signatureValue);
+
+            var timestampRequest = new TimestampRequest(
+                signingSpecifications: SigningSpecifications.V1,
+                hashedMessage: messageHash,
+                hashAlgorithm: request.TimestampHashAlgorithm,
+                target: SignaturePlacement.Countersignature
+            );
+
+            return timestampProvider.TimestampSignatureAsync(primarySignature, timestampRequest, logger, token);
         }
     }
 }
