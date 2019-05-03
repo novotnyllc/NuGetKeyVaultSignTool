@@ -9,6 +9,7 @@
     <PackageReference Include="Microsoft.Azure.KeyVault" Version="3.0.3" />
     <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="4.5.1" />
     <PackageReference Include="NuGet.Packaging" Version="5.2.0-xprivate.60006" />
+    <PackageReference Include="NuGet.Protocol" Version="5.0.0" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.5" />
     <PackageReference Include="RSAKeyVaultProvider" Version="1.1.22" />
   </ItemGroup>

@@ -122,12 +122,6 @@ namespace NuGetKeyVaultSignTool
                         return -1;
                     }
 
-                    if (!File.Exists(file.Value))
-                    {
-                        application.Error.WriteLine("File does not exist");
-                        return -1;
-                    }
-
                     var cmd = new VerifyCommand(logger);
                     var buffer = new StringBuilder();
                     var result = await cmd.VerifyAsync(file.Value, buffer);

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using NuGet.Common;
 using NuGet.Packaging.Signing;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
+using NuGet.Protocol;
 
 namespace NuGetKeyVaultSignTool
 {
@@ -76,38 +77,42 @@ namespace NuGetKeyVaultSignTool
 
         public async Task<bool> SignAsync(string packagePath, string outputPath, string timestampUrl, HashAlgorithmName signatureHashAlgorithm, HashAlgorithmName timestampHashAlgorithm, bool overwrite, X509Certificate2 publicCertificate, System.Security.Cryptography.RSA rsa)
         {
-            var fileName = Path.GetFileName(packagePath);
-            logger.LogInformation($"{nameof(SignAsync)} [{fileName}]: Begin Signing {packagePath}");
+            var packagesToSign = LocalFolderUtility.ResolvePackageFromPath(packagePath);
+            
             var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
 
             var request = new AuthorSignPackageRequest(publicCertificate, signatureHashAlgorithm, timestampHashAlgorithm);
 
             string originalPackageCopyPath = null;
-            try
+            foreach (var package in packagesToSign)
             {
-                originalPackageCopyPath = CopyPackage(packagePath);
-
-                using (var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, new NuGetLogger(logger, fileName)))
-                {
-                    await SigningUtility.SignAsync(options, request, CancellationToken.None);
-                }
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, e.Message);
-                return false;
-            }
-            finally
-            {
+                logger.LogInformation($"{nameof(SignAsync)} [{package}]: Begin Signing {Path.GetFileName(package)}");
                 try
                 {
-                    FileUtility.Delete(originalPackageCopyPath);
-                }
-                catch
-                {
-                }
+                    originalPackageCopyPath = CopyPackage(package);
 
-                logger.LogInformation($"{nameof(SignAsync)} [{fileName}]: End Signing {packagePath}");
+                    using (var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, package, overwrite, signatureProvider, new NuGetLogger(logger, package)))
+                    {
+                        await SigningUtility.SignAsync(options, request, CancellationToken.None);
+                    }
+                }
+                catch (Exception e)
+                {
+                    logger.LogError(e, e.Message);
+                    return false;
+                }
+                finally
+                {
+                    try
+                    {
+                        FileUtility.Delete(originalPackageCopyPath);
+                    }
+                    catch
+                    {
+                    }
+
+                    logger.LogInformation($"{nameof(SignAsync)} [{package}]: End Signing {Path.GetFileName(package)}");
+                }
             }
 
             return true;
