@@ -13,13 +13,14 @@ using NuGet.Packaging;
 using NuGet.Packaging.Signing;
 using Microsoft.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
+using NuGet.Protocol;
 
 namespace NuGetKeyVaultSignTool
 {
     public class VerifyCommand
     {
         readonly ILogger logger;
-        
+
         public VerifyCommand(ILogger logger)
         {
             this.logger = logger;
@@ -37,44 +38,50 @@ namespace NuGetKeyVaultSignTool
                 throw new ArgumentNullException(nameof(buffer));
             }
 
-            
+
             var trustProviders = new ISignatureVerificationProvider[]
             {
                 new IntegrityVerificationProvider(),
                 new SignatureTrustAndValidityVerificationProvider()
             };
             var verifier = new PackageSignatureVerifier(trustProviders);
+
+            var allPackagesVerified = true;
+
             try
             {
                 var result = 0;
-                using (var package = new PackageArchiveReader(file))
+                var packagesToVerify = LocalFolderUtility.ResolvePackageFromPath(file);
+
+                foreach (var packageFile in packagesToVerify)
                 {
-                    var verificationResult = await verifier.VerifySignaturesAsync(package, SignedPackageVerifierSettings.GetVerifyCommandDefaultPolicy(), CancellationToken.None);
-
-
-                    if (verificationResult.IsValid)
+                    using (var package = new PackageArchiveReader(packageFile))
                     {
-                        return verificationResult.IsValid;
-                    }
-                    else
-                    {
-                        var logMessages = verificationResult.Results.SelectMany(p => p.Issues).Select(p => p .AsRestoreLogMessage()).ToList();
-                        foreach (var msg in logMessages)
+                        var verificationResult = await verifier.VerifySignaturesAsync(package, SignedPackageVerifierSettings.GetVerifyCommandDefaultPolicy(), CancellationToken.None);
+
+                        if (verificationResult.IsValid)
                         {
-                            buffer.AppendLine(msg.Message);
+                            allPackagesVerified = true;
                         }
-                        if (logMessages.Any(m => m.Level >= NuGet.Common.LogLevel.Warning))
+                        else
                         {
-                            var errors = logMessages.Where(m => m.Level == NuGet.Common.LogLevel.Error).Count();
-                            var warnings = logMessages.Where(m => m.Level == NuGet.Common.LogLevel.Warning).Count();
+                            var logMessages = verificationResult.Results.SelectMany(p => p.Issues).Select(p => p.AsRestoreLogMessage()).ToList();
+                            foreach (var msg in logMessages)
+                            {
+                                buffer.AppendLine(msg.Message);
+                            }
+                            if (logMessages.Any(m => m.Level >= NuGet.Common.LogLevel.Warning))
+                            {
+                                var errors = logMessages.Where(m => m.Level == NuGet.Common.LogLevel.Error).Count();
+                                var warnings = logMessages.Where(m => m.Level == NuGet.Common.LogLevel.Warning).Count();
 
-                            buffer.AppendLine($"Finished with {errors} errors and {warnings} warnings.");
+                                buffer.AppendLine($"Finished with {errors} errors and {warnings} warnings.");
 
-                            result = errors;
+                                result = errors;
+                            }
+                            allPackagesVerified = false;
                         }
-                        return false;
                     }
-
                 }
             }
             catch (Exception e)
@@ -82,6 +89,8 @@ namespace NuGetKeyVaultSignTool
                 logger.LogError(e, e.Message);
                 return false;
             }
+
+            return allPackagesVerified;
         }
     }
 }
