@@ -46,7 +46,7 @@ namespace NuGetKeyVaultSignTool
             }
 
             logger.LogInformation($"{nameof(CreatePrimarySignatureAsync)}: Creating Primary signature");
-            var authorSignature = CreateKeyVaultPrimarySignature(request, signatureContent, request.SignatureType, logger);
+            var authorSignature = CreateKeyVaultPrimarySignature(request, signatureContent, logger);
             logger.LogInformation($"{nameof(CreatePrimarySignatureAsync)}: Primary signature completed");
 
             logger.LogInformation($"{nameof(CreatePrimarySignatureAsync)}: Timestamp primary signature");
@@ -119,7 +119,7 @@ namespace NuGetKeyVaultSignTool
             return PrimarySignature.Load(cms);
         }
 
-        PrimarySignature CreateKeyVaultPrimarySignature(SignPackageRequest request, SignatureContent signatureContent, SignatureType signatureType, ILogger logger)
+        PrimarySignature CreateKeyVaultPrimarySignature(SignPackageRequest request, SignatureContent signatureContent, ILogger logger)
         {
             // Get the chain
 
