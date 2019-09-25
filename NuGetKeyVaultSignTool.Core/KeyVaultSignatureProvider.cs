@@ -3,24 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using NuGet.Common;
 using NuGet.Packaging.Signing;
-using NuGetKeyVaultSignTool.BouncyCastle;
-using Org.BouncyCastle.Asn1;
-using Org.BouncyCastle.Cms;
-using Org.BouncyCastle.Security;
-using Org.BouncyCastle.X509.Extension;
-using Org.BouncyCastle.X509.Store;
-using AttributeTable = Org.BouncyCastle.Asn1.Cms.AttributeTable;
 
 namespace NuGetKeyVaultSignTool
 {
     class KeyVaultSignatureProvider : ISignatureProvider
     {
+        // Occurs when SignedCms.ComputeSignature cannot read the certificate private key
+        // "Invalid provider type specified." (INVALID_PROVIDER_TYPE)
+        private const int INVALID_PROVIDER_TYPE_HRESULT = unchecked((int)0x80090014);
+
         private readonly RSA provider;
         private readonly ITimestampProvider timestampProvider;
 
@@ -48,7 +46,7 @@ namespace NuGetKeyVaultSignTool
             }
 
             logger.LogInformation($"{nameof(CreatePrimarySignatureAsync)}: Creating Primary signature");
-            var authorSignature = CreateKeyVaultPrimarySignature(request, signatureContent, request.SignatureType);
+            var authorSignature = CreateKeyVaultPrimarySignature(request, signatureContent, request.SignatureType, logger);
             logger.LogInformation($"{nameof(CreatePrimarySignatureAsync)}: Primary signature completed");
 
             logger.LogInformation($"{nameof(CreatePrimarySignatureAsync)}: Timestamp primary signature");
@@ -63,7 +61,7 @@ namespace NuGetKeyVaultSignTool
             throw new NotImplementedException();
         }
 
-        PrimarySignature CreateKeyVaultPrimarySignature(SignPackageRequest request, SignatureContent signatureContent, SignatureType signatureType)
+        PrimarySignature CreateKeyVaultPrimarySignature(SignPackageRequest request, SignatureContent signatureContent, SignatureType signatureType, ILogger logger)
         {
             // Get the chain
 
@@ -71,76 +69,83 @@ namespace NuGetKeyVaultSignTool
                                                    .GetGetMethod(true);
 
             var certs = (IReadOnlyList<X509Certificate2>)getter.Invoke(request, null);
-            
-            
-            var attribs = SigningUtility.CreateSignedAttributes(request, certs);
 
-            // Convert .NET crypto attributes to Bouncy Castle
-            var attribTable = new AttributeTable(new Asn1EncodableVector(attribs.Cast<CryptographicAttributeObject>()
-                                                                                .Select(ToBcAttribute)
-                                                                                .ToArray()));
-            // SignerInfo generator setup
-            var signerInfoGeneratorBuilder = new SignerInfoGeneratorBuilder()
-                .WithSignedAttributeGenerator(new DefaultSignedAttributeTableGenerator(attribTable));
 
+            var cmsSigner = CreateCmsSigner(request, certs, logger);
+
+            var contentInfo = new ContentInfo(signatureContent.GetBytes());
+            var cms = new SignedCms(contentInfo);
+
+            try
+            {
+                cms.ComputeSignature(cmsSigner, false); // silent is false to ensure PIN prompts appear if CNG/CAPI requires it
+            }
+            catch (CryptographicException ex) when (ex.HResult == INVALID_PROVIDER_TYPE_HRESULT)
+            {
+                var exceptionBuilder = new StringBuilder();
+                exceptionBuilder.AppendLine("Invalid provider type");
+                exceptionBuilder.AppendLine(CertificateUtility.X509Certificate2ToString(request.Certificate, NuGet.Common.HashAlgorithmName.SHA256));
+
+                throw new SignatureException(NuGetLogCode.NU3001, exceptionBuilder.ToString());
+            }
+
+            return PrimarySignature.Load(cms);
+        }
+
+        CmsSigner CreateCmsSigner(SignPackageRequest request, IReadOnlyList<X509Certificate2> chain, ILogger logger)
+        {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            if (logger == null)
+            {
+                throw new ArgumentNullException(nameof(logger));
+            }
 
             // Subject Key Identifier (SKI) is smaller and less prone to accidental matching than issuer and serial
             // number.  However, to ensure cross-platform verification, SKI should only be used if the certificate
             // has the SKI extension attribute.
+            CmsSigner signer;
 
-            // Try to look for the value 
-            var bcCer = DotNetUtilities.FromX509Certificate(request.Certificate);
-            var ext = bcCer.GetExtensionValue(new DerObjectIdentifier(Oids.SubjectKeyIdentifier));
-            SignerInfoGenerator signerInfoGenerator;
-            if (ext != null)
+            if (request.Certificate.Extensions[Oids.SubjectKeyIdentifier] == null)
             {
-                var ski = new SubjectKeyIdentifierStructure(ext);
-                signerInfoGenerator = signerInfoGeneratorBuilder.Build(new RsaSignatureFactory(HashAlgorithmToBouncyCastle(request.SignatureHashAlgorithm), provider), ski.GetKeyIdentifier());
+                signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, request.Certificate, provider);
             }
             else
-                signerInfoGenerator = signerInfoGeneratorBuilder.Build(new RsaSignatureFactory(HashAlgorithmToBouncyCastle(request.SignatureHashAlgorithm), provider), bcCer);
-
-            
-            var generator = new CmsSignedDataGenerator();
-            
-            generator.AddSignerInfoGenerator(signerInfoGenerator);
-
-            // Get the chain as bc certs
-            generator.AddCertificates(X509StoreFactory.Create("Certificate/Collection", 
-                                                              new X509CollectionStoreParameters(certs.Select(DotNetUtilities.FromX509Certificate).
-                                                                                                      ToList())));
-            
-            var msg = new CmsProcessableByteArray(signatureContent.GetBytes());
-            var data = generator.Generate(msg, true);
-
-            var encoded = data.ContentInfo.GetDerEncoded();
-            return PrimarySignature.Load(encoded);
-        }
-
-        Org.BouncyCastle.Asn1.Cms.Attribute ToBcAttribute(CryptographicAttributeObject obj)
-        {
-            var encodables = obj.Values.Cast<AsnEncodedData>().Select(d => Asn1Object.FromByteArray(d.RawData)).ToArray();
-            var derSet = new DerSet(encodables);
-
-            var attr = new Org.BouncyCastle.Asn1.Cms.Attribute(new DerObjectIdentifier(obj.Oid.Value), derSet);
-
-            return attr;
-        }
-
-        static string HashAlgorithmToBouncyCastle(NuGet.Common.HashAlgorithmName algorithmName)
-        {
-            switch (algorithmName)
             {
-                case NuGet.Common.HashAlgorithmName.SHA256:
-                    return "SHA256WITHRSA";
-                case NuGet.Common.HashAlgorithmName.SHA384:
-                    return "SHA384WITHRSA";
-                case NuGet.Common.HashAlgorithmName.SHA512:
-                    return "SHA512WITHRSA";
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(algorithmName));
+                signer = new CmsSigner(SubjectIdentifierType.SubjectKeyIdentifier, request.Certificate, provider);
             }
+
+            foreach (var certificate in chain)
+            {
+                signer.Certificates.Add(certificate);
+            }
+
+            CryptographicAttributeObjectCollection attributes;
+
+            if (request.SignatureType == SignatureType.Repository)
+            {
+                attributes = SigningUtility.CreateSignedAttributes((RepositorySignPackageRequest)request, chain);
+            }
+            else
+            {
+                attributes = SigningUtility.CreateSignedAttributes(request, chain);
+            }
+
+            foreach (var attribute in attributes)
+            {
+                signer.SignedAttributes.Add(attribute);
+            }
+
+            // We built the chain ourselves and added certificates.
+            // Passing any other value here would trigger another chain build
+            // and possibly add duplicate certs to the collection.
+            signer.IncludeOption = X509IncludeOption.None;
+            signer.DigestAlgorithm = request.SignatureHashAlgorithm.ConvertToOid();
+
+            return signer;
         }
 
         Task<PrimarySignature> TimestampPrimarySignatureAsync(SignPackageRequest request, ILogger logger, PrimarySignature signature, CancellationToken token)

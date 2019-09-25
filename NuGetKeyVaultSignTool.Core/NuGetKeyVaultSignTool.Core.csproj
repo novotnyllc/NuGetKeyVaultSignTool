@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -9,9 +9,9 @@
     <PackageReference Include="Microsoft.Azure.KeyVault" Version="3.0.4" />
     <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="5.2.2" />
     <PackageReference Include="NuGet.Packaging" Version="5.4.0-xprivate.60013" />
-    <PackageReference Include="NuGet.Protocol" Version="5.4.0-xprivate.60013" />
-    <PackageReference Include="Portable.BouncyCastle" Version="1.8.5" />
+    <PackageReference Include="NuGet.Protocol" Version="5.4.0-xprivate.60013" />    
     <PackageReference Include="RSAKeyVaultProvider" Version="1.1.22" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="4.6.0" />
   </ItemGroup>
 
 </Project>
