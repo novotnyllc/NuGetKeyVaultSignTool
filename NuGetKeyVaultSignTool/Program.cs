@@ -190,13 +190,16 @@ namespace NuGetKeyVaultSignTool
 
         static SignatureType? SignatureTypeFromInput(string value)
         {
-            return (value?.ToLower()) switch
+            switch (value?.ToLower())
             {
-                "author" => SignatureType.Author,
-                "repository" => SignatureType.Repository,
+                case "author":
+                    return SignatureType.Author;
+                case "repository":
+                    return SignatureType.Repository;
 
-                _ => null,
-            };
+                default:
+                    return null;
+            }
         }
 
         static T GetValueFromOption<T>(CommandOption option, Func<string, T?> transform, T defaultIfNull) where T : struct
