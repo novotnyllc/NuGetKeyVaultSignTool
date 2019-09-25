@@ -55,32 +55,30 @@ namespace NuGetKeyVaultSignTool
 
                 foreach (var packageFile in packagesToVerify)
                 {
-                    using (var package = new PackageArchiveReader(packageFile))
+                    using var package = new PackageArchiveReader(packageFile);
+                    var verificationResult = await verifier.VerifySignaturesAsync(package, SignedPackageVerifierSettings.GetVerifyCommandDefaultPolicy(), CancellationToken.None);
+
+                    if (verificationResult.IsValid)
                     {
-                        var verificationResult = await verifier.VerifySignaturesAsync(package, SignedPackageVerifierSettings.GetVerifyCommandDefaultPolicy(), CancellationToken.None);
-
-                        if (verificationResult.IsValid)
+                        allPackagesVerified = true;
+                    }
+                    else
+                    {
+                        var logMessages = verificationResult.Results.SelectMany(p => p.Issues).Select(p => p.AsRestoreLogMessage()).ToList();
+                        foreach (var msg in logMessages)
                         {
-                            allPackagesVerified = true;
+                            buffer.AppendLine(msg.Message);
                         }
-                        else
+                        if (logMessages.Any(m => m.Level >= NuGet.Common.LogLevel.Warning))
                         {
-                            var logMessages = verificationResult.Results.SelectMany(p => p.Issues).Select(p => p.AsRestoreLogMessage()).ToList();
-                            foreach (var msg in logMessages)
-                            {
-                                buffer.AppendLine(msg.Message);
-                            }
-                            if (logMessages.Any(m => m.Level >= NuGet.Common.LogLevel.Warning))
-                            {
-                                var errors = logMessages.Where(m => m.Level == NuGet.Common.LogLevel.Error).Count();
-                                var warnings = logMessages.Where(m => m.Level == NuGet.Common.LogLevel.Warning).Count();
+                            var errors = logMessages.Where(m => m.Level == NuGet.Common.LogLevel.Error).Count();
+                            var warnings = logMessages.Where(m => m.Level == NuGet.Common.LogLevel.Warning).Count();
 
-                                buffer.AppendLine($"Finished with {errors} errors and {warnings} warnings.");
+                            buffer.AppendLine($"Finished with {errors} errors and {warnings} warnings.");
 
-                                result = errors;
-                            }
-                            allPackagesVerified = false;
+                            result = errors;
                         }
+                        allPackagesVerified = false;
                     }
                 }
             }

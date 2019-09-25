@@ -36,6 +36,8 @@ namespace NuGetKeyVaultSignTool
                 var rfc3161TimeStamp = signConfiguration.Option("-tr | --timestamp-rfc3161", "Specifies the RFC 3161 timestamp server's URL. If this option (or -t) is not specified, the signed file will not be timestamped.", CommandOptionType.SingleValue);
                 var rfc3161Digest = signConfiguration.Option("-td | --timestamp-digest", "Used with the -tr switch to request a digest algorithm used by the RFC 3161 timestamp server. Default option is sha256", CommandOptionType.SingleValue);
                 var signatureType = signConfiguration.Option("-st | --signature-type", "The signature type (omit for author, default. Only author is supported currently).", CommandOptionType.SingleValue);
+                var v3ServiceIndexUrl = signConfiguration.Option("-v3si | --v3-service-index-url", "Specifies V3 Service Index Url. Required if SignatureType is Repository", CommandOptionType.SingleValue);
+                var packageOwners = signConfiguration.Option("-own | --package-owner", "Package Owners. Required if SignatureType is Repository", CommandOptionType.MultipleValue);
                 var azureKeyVaultUrl = signConfiguration.Option("-kvu | --azure-key-vault-url", "The URL to an Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultClientId = signConfiguration.Option("-kvi | --azure-key-vault-client-id", "The Client ID to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultClientSecret = signConfiguration.Option("-kvs | --azure-key-vault-client-secret", "The Client Secret to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
@@ -79,10 +81,28 @@ namespace NuGetKeyVaultSignTool
                     var timeHashAlg = GetValueFromOption(rfc3161Digest, AlgorithmFromInput, HashAlgorithmName.SHA256);
                     var sigType = GetValueFromOption(signatureType, SignatureTypeFromInput, SignatureType.Author);
 
+                    Uri v3ServiceIndex = null;
+
                     if (sigType != SignatureType.Author)
                     {
-                        logger.LogError("Only author signatures are currently supported.");
-                        return -1;
+                       // Check for service index and owners
+                        if (!v3ServiceIndexUrl.HasValue())
+                        {
+                            logger.LogError("Service index url must be specified for repository signatures");
+                            return -1;
+                        }
+
+                        if (!Uri.TryCreate(v3ServiceIndexUrl.Value(), UriKind.Absolute, out v3ServiceIndex))
+                        {
+                            logger.LogError($"Could not parse '{v3ServiceIndexUrl.Value()}' as a Uri");
+                            return -1;
+                        }
+
+                        if (!packageOwners.HasValue())
+                        {
+                            logger.LogError("At least one package owner must be specified for repository signatures");
+                            return -1;
+                        }
                     }
 
                     var output = string.IsNullOrWhiteSpace(outputPath.Value()) ? packagePath.Value : outputPath.Value();
@@ -95,6 +115,8 @@ namespace NuGetKeyVaultSignTool
                                          timeHashAlg,
                                          sigType,
                                          force.HasValue(),
+                                         v3ServiceIndex,             
+                                         packageOwners.Values,
                                          azureKeyVaultCertificateName.Value(),
                                          azureKeyVaultUrl.Value(),
                                          azureKeyVaultClientId.Value(),
