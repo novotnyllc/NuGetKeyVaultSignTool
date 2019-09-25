@@ -78,24 +78,17 @@ namespace NuGetKeyVaultSignTool
 
 	    static Microsoft.Extensions.Logging.LogLevel ConvertLevel(LogLevel level)
 	    {
-            switch (level)
+            return level switch
             {
-                case LogLevel.Debug:
-                    return Microsoft.Extensions.Logging.LogLevel.Debug;
-                case LogLevel.Verbose:
-                    return Microsoft.Extensions.Logging.LogLevel.Trace;
-                case LogLevel.Information:
-                    return Microsoft.Extensions.Logging.LogLevel.Information;
-                case LogLevel.Minimal:
-                    return Microsoft.Extensions.Logging.LogLevel.Information;
-                case LogLevel.Warning:
-                    return Microsoft.Extensions.Logging.LogLevel.Warning;
-                case LogLevel.Error:
-                    return Microsoft.Extensions.Logging.LogLevel.Error;
+                LogLevel.Debug => Microsoft.Extensions.Logging.LogLevel.Debug,
+                LogLevel.Verbose => Microsoft.Extensions.Logging.LogLevel.Trace,
+                LogLevel.Information => Microsoft.Extensions.Logging.LogLevel.Information,
+                LogLevel.Minimal => Microsoft.Extensions.Logging.LogLevel.Information,
+                LogLevel.Warning => Microsoft.Extensions.Logging.LogLevel.Warning,
+                LogLevel.Error => Microsoft.Extensions.Logging.LogLevel.Error,
 
-                default:
-                    return Microsoft.Extensions.Logging.LogLevel.Information;
-            }
+                _ => Microsoft.Extensions.Logging.LogLevel.Information,
+            };
         }
 
 

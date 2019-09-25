@@ -102,10 +102,8 @@ namespace NuGetKeyVaultSignTool
                 {
                     originalPackageCopyPath = CopyPackage(package);
 
-                    using (var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, new NuGetLogger(logger, package)))
-                    {
-                        await SigningUtility.SignAsync(options, request, CancellationToken.None);
-                    }
+                    using var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, new NuGetLogger(logger, package));
+                    await SigningUtility.SignAsync(options, request, CancellationToken.None);
                 }
                 catch (Exception e)
                 {
