@@ -10,7 +10,7 @@
     <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="5.2.2" />
     <PackageReference Include="NuGet.Packaging" Version="5.4.0-xprivate.60013" />
     <PackageReference Include="NuGet.Protocol" Version="5.4.0-xprivate.60013" />    
-    <PackageReference Include="RSAKeyVaultProvider" Version="1.1.22" />
+    <PackageReference Include="RSAKeyVaultProvider" Version="1.1.57" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="4.6.0" />
   </ItemGroup>
 
