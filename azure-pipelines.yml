@@ -6,51 +6,84 @@ pr:
   - master
   - rel/*
 
-pool:
-  vmImage: windows-2019
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    pool:
+      vmImage: windows-latest
 
-variables: 
-  BuildConfiguration: Release
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+    variables: 
+      BuildConfiguration: Release
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 
-steps:
-- task: UseDotNet@2
-  displayName: 'Use .NET Core SDK 3.1.x'
-  inputs:
-    version: 3.1.x    
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Use .NET Core SDK 3.1.x'
+      inputs:
+        version: 3.1.x    
 
-- task: DotNetCoreCLI@2  
-  inputs:
-    command: custom
-    custom: tool
-    arguments: install --tool-path . nbgv
-  displayName: Install NBGV tool
+    - task: DotNetCoreCLI@2  
+      inputs:
+        command: custom
+        custom: tool
+        arguments: install --tool-path . nbgv
+      displayName: Install NBGV tool
 
-- script: nbgv cloud
-  displayName: Set Version
+    - script: nbgv cloud
+      displayName: Set Version
 
-- task: DotNetCoreCLI@2
-  inputs:
-    command: pack
-    packagesToPack: '**/*.csproj'
-    configuration: $(BuildConfiguration)
-    packDirectory: $(Build.ArtifactStagingDirectory)\Artifacts    
-    verbosityPack: Minimal
-  displayName: Pack  
-    
-- task: PowerShell@2
-  displayName: Authenticode Sign artifacts
-  inputs:
-    filePath: Scripts/Sign-Package.ps1
-  env:
-    SignClientUser: $(SignClientUser)
-    SignClientSecret: $(SignClientSecret)
-    ArtifactDirectory: $(Build.ArtifactStagingDirectory)\Artifacts
-  condition: and(succeeded(), not(eq(variables['build.reason'], 'PullRequest')), not(eq(variables['SignClientSecret'], '')), not(eq(variables['SignClientUser'], '')))
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: pack
+        packagesToPack: '**/*.csproj'
+        configuration: $(BuildConfiguration)
+        packDirectory: $(Build.ArtifactStagingDirectory)\Packages    
+        verbosityPack: Minimal
+      displayName: Pack  
 
-- task: PublishBuildArtifacts@1
-  displayName: Publish Build Artifacts
-  inputs:
-    pathToPublish: $(Build.ArtifactStagingDirectory)\Artifacts
-    artifactType: container
-    artifactName: Artifacts
+    - publish: $(Build.ArtifactStagingDirectory)\Packages
+      displayName: Publish build packages
+      artifact: BuildPackages
+
+    - publish: config
+      displayName: Publish signing config
+      artifact: config
+
+- stage: CodeSign
+  condition: and(succeeded('Build'), not(eq(variables['build.reason'], 'PullRequest')))
+  jobs:
+  - deployment: CodeSign
+    displayName: Code Signing
+    pool:
+      vmImage: windows-latest    
+    environment: Code Sign - CI
+    variables:
+    - group: Sign Client Credentials
+    strategy:
+      runOnce:
+        deploy:
+          steps: 
+          - task: DotNetCoreCLI@2
+            inputs:
+              command: custom
+              custom: tool
+              arguments: install --tool-path . SignClient
+            displayName: Install SignTool tool
+
+          - pwsh: |
+              .\SignClient "Sign" `
+              --baseDirectory "$(Pipeline.Workspace)\BuildPackages" `
+              --input "**/*.nupkg" `
+              --config "$(Pipeline.Workspace)\config\signclient.json" `
+              --filelist "$(Pipeline.Workspace)\config\filelist.txt" `
+              --user "$(SignClientUser)" `
+              --secret "$(SignClientSecret)" `
+              --name "NuGetKeyVaultSignTool" `
+              --description "NuGetKeyVaultSignTool" `
+              --descriptionUrl "https://github.com/onovotny/NuGetKeyVaultSignTool"
+            displayName: Sign packages
+              
+          - publish: $(Pipeline.Workspace)/BuildPackages
+            displayName: Publish Signed Packages
+            artifact: SignedPackages      
