@@ -46,7 +46,7 @@ namespace NuGetKeyVaultSignTool
                 var azureKeyVaultTenantId = signConfiguration.Option("-kvt | --azure-key-vault-tenant-id", "The Tenant Id to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultCertificateName = signConfiguration.Option("-kvc | --azure-key-vault-certificate", "The name of the certificate in Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultAccessToken = signConfiguration.Option("-kva | --azure-key-vault-accesstoken", "The Access Token to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
-                var azureKeyVaultMsi = signConfiguration.Option("-kvm | --azure-key-vault-use-msi", "Use a Managed Identity to access Azure Key Vault.", CommandOptionType.NoValue);
+                var azureKeyVaultMsi = signConfiguration.Option("-kvm | --azure-key-vault-managed-identity", "Use a Managed Identity to access Azure Key Vault.", CommandOptionType.NoValue);
 
                 signConfiguration.OnExecute(async () =>
                 {
