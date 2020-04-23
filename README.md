@@ -26,6 +26,7 @@ dotnet tool install --global NuGetKeyVaultSignTool
   --timestamp-digest sha256 `
   --azure-key-vault-url https://my-keyvault.vault.azure.net `
   --azure-key-vault-client-id 1234566789 `
+  --azure-key-vault-tenant-id <the guid or domain> `
   --azure-key-vault-client-secret abcxyz `
   --azure-key-vault-certificate MyCodeSignCert
 ```
@@ -55,6 +56,7 @@ Options:
 * `-kvs | --azure-key-vault-client-secret` - The Client Secret to authenticate to the Azure Key Vault.
 * `-kvc | --azure-key-vault-certificate` - The name of the certificate in Azure Key Vault.
 * `-kva | --azure-key-vault-accesstoken` - The Access Token to authenticate to the Azure Key Vault.
+* `-kvm | --azure-key-vault-managed-identity` - Use a Managed Identity to access Azure Key Vault.
 
 ## `verify`
 
