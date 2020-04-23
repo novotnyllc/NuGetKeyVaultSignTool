@@ -7,6 +7,8 @@ using NuGet.Common;
 using NuGet.Packaging.Signing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Azure.Core;
+using Azure.Identity;
 
 namespace NuGetKeyVaultSignTool
 {
@@ -41,8 +43,10 @@ namespace NuGetKeyVaultSignTool
                 var azureKeyVaultUrl = signConfiguration.Option("-kvu | --azure-key-vault-url", "The URL to an Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultClientId = signConfiguration.Option("-kvi | --azure-key-vault-client-id", "The Client ID to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultClientSecret = signConfiguration.Option("-kvs | --azure-key-vault-client-secret", "The Client Secret to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
+                var azureKeyVaultTenantId = signConfiguration.Option("-kvt | --azure-key-vault-tenant-id", "The Tenant Id to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultCertificateName = signConfiguration.Option("-kvc | --azure-key-vault-certificate", "The name of the certificate in Azure Key Vault.", CommandOptionType.SingleValue);
                 var azureKeyVaultAccessToken = signConfiguration.Option("-kva | --azure-key-vault-accesstoken", "The Access Token to authenticate to the Azure Key Vault.", CommandOptionType.SingleValue);
+                var azureKeyVaultMsi = signConfiguration.Option("-kvm | --azure-key-vault-use-msi", "Use a Managed Identity to access Azure Key Vault.", CommandOptionType.NoValue);
 
                 signConfiguration.OnExecute(async () =>
                 {
@@ -70,10 +74,10 @@ namespace NuGetKeyVaultSignTool
                         return -1;
                     }
 
-                    var valid = (azureKeyVaultAccessToken.HasValue() || (azureKeyVaultClientId.HasValue() && azureKeyVaultClientSecret.HasValue()));
+                    var valid = (azureKeyVaultAccessToken.HasValue() || azureKeyVaultMsi.HasValue() || (azureKeyVaultClientId.HasValue() && azureKeyVaultClientSecret.HasValue() && azureKeyVaultTenantId.HasValue()));
                     if (!valid)
                     {
-                        logger.LogError("Either access token or clientId and client secret must be specified");
+                        logger.LogError("Either access token or clientId, client secret, and tenant id must be specified");
                         return -1;
                     }
 
@@ -105,7 +109,29 @@ namespace NuGetKeyVaultSignTool
                         }
                     }
 
+                    if (!Uri.TryCreate(azureKeyVaultUrl.Value(), UriKind.Absolute, out Uri keyVaultUri))
+                    {
+                        logger.LogError($"Could not parse '{azureKeyVaultUrl.Value()}' as a Uri");
+                        return -1;
+                    }
+
                     var output = string.IsNullOrWhiteSpace(outputPath.Value()) ? packagePath.Value : outputPath.Value();
+
+
+                    TokenCredential credential = null;
+
+                    if (azureKeyVaultMsi.HasValue())
+                    {
+                        credential = new DefaultAzureCredential();
+                    }
+                    else if (!string.IsNullOrWhiteSpace(azureKeyVaultAccessToken.Value()))
+                    {
+                        credential = new AccessTokenCredential(azureKeyVaultAccessToken.Value(), DateTimeOffset.UtcNow.AddHours(1));
+                    }
+                    else
+                    {
+                        credential = new ClientSecretCredential(azureKeyVaultTenantId.Value(), azureKeyVaultClientId.Value(), azureKeyVaultClientSecret.Value());
+                    }
 
                     var cmd = new SignCommand(logger);
                     var  result = await cmd.SignAsync(packagePath.Value,
@@ -118,10 +144,9 @@ namespace NuGetKeyVaultSignTool
                                          v3ServiceIndex,             
                                          packageOwners.Values,
                                          azureKeyVaultCertificateName.Value(),
-                                         azureKeyVaultUrl.Value(),
-                                         azureKeyVaultClientId.Value(),
-                                         azureKeyVaultClientSecret.Value(),
-                                         azureKeyVaultAccessToken.Value());
+                                         keyVaultUri,
+                                         credential
+                                         );
 
                     return result ? 0 : -1;
                 });
