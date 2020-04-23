@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.KeyVault;
-using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Microsoft.Extensions.Logging;
 using NuGet.Common;
 using NuGet.Packaging.Signing;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 using NuGet.Protocol;
+using Azure.Core;
+using Azure.Security.KeyVault.Certificates;
+using RSAKeyVaultProvider;
 
 namespace NuGetKeyVaultSignTool
 {
@@ -34,53 +34,28 @@ namespace NuGetKeyVaultSignTool
                                          Uri v3ServiceIndexUrl,
                                          IReadOnlyList<string> packageOwners,
                                          string keyVaultCertificateName,
-                                         string keyVaultUrl,
-                                         string keyVaultClientId,
-                                         string keyVaultClientSecret,
-                                         string keyVaultAccessToken)
+                                         Uri keyVaultUrl,
+                                         TokenCredential credential,
+                                         CancellationToken cancellationToken = default)
         {
-            string validatedToken = null;
+            
 
-            async Task<string> Authenticate(string authority, string resource, string scope)
-            {
-                if (!string.IsNullOrWhiteSpace(keyVaultAccessToken))
-                {
-                    validatedToken = keyVaultAccessToken;
-                    return keyVaultAccessToken;
-                }
-
-                var context = new AuthenticationContext(authority);
-                var credential = new ClientCredential(keyVaultClientId, keyVaultClientSecret);
-
-                var result = await context.AcquireTokenAsync(resource, credential)
-                                          .ConfigureAwait(false);
-                if (result == null)
-                {
-                    throw new InvalidOperationException("Authentication to Azure failed.");
-                }
-                validatedToken = result.AccessToken;
-                return result.AccessToken;
-            }
-
-            var client = new KeyVaultClient(Authenticate, new HttpClient());
-
-
+            var client = new CertificateClient(keyVaultUrl, credential);
             // We call this here to verify it's a valid cert
             // It also implicitly validates the access token or credentials
-            var kvcert = await client.GetCertificateAsync(keyVaultUrl, keyVaultCertificateName)
+            var kvcert = await client.GetCertificateAsync(keyVaultCertificateName, cancellationToken)
                                      .ConfigureAwait(false);
-            var publicCertificate = new X509Certificate2(kvcert.Cer);
-            var keyIdentifier = kvcert.KeyIdentifier;
+            var publicCertificate = new X509Certificate2(kvcert.Value.Cer);
 
 
-            var rsa = client.ToRSA(keyIdentifier, publicCertificate);
+            var rsa = RSAFactory.Create(credential, kvcert.Value.KeyId, publicCertificate);
 
-            return await SignAsync(packagePath, outputPath, timestampUrl, v3ServiceIndexUrl, packageOwners, signatureType, signatureHashAlgorithm, timestampHashAlgorithm, overwrite, publicCertificate, rsa);
+            return await SignAsync(packagePath, outputPath, timestampUrl, v3ServiceIndexUrl, packageOwners, signatureType, signatureHashAlgorithm, timestampHashAlgorithm, overwrite, publicCertificate, rsa, cancellationToken);
         }
 
         public async Task<bool> SignAsync(string packagePath, string outputPath, string timestampUrl, Uri v3ServiceIndex, IReadOnlyList<string> packageOwners,
                                           SignatureType signatureType, HashAlgorithmName signatureHashAlgorithm, HashAlgorithmName timestampHashAlgorithm, 
-                                          bool overwrite, X509Certificate2 publicCertificate, System.Security.Cryptography.RSA rsa)
+                                          bool overwrite, X509Certificate2 publicCertificate, System.Security.Cryptography.RSA rsa, CancellationToken cancellationToken = default)
         {
             var packagesToSign = LocalFolderUtility.ResolvePackageFromPath(packagePath);
             
@@ -97,13 +72,14 @@ namespace NuGetKeyVaultSignTool
             string originalPackageCopyPath = null;
             foreach (var package in packagesToSign)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 logger.LogInformation($"{nameof(SignAsync)} [{package}]: Begin Signing {Path.GetFileName(package)}");
                 try
                 {
                     originalPackageCopyPath = CopyPackage(package);
 
                     using var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, new NuGetLogger(logger, package));
-                    await SigningUtility.SignAsync(options, request, CancellationToken.None);
+                    await SigningUtility.SignAsync(options, request, cancellationToken);
                 }
                 catch (Exception e)
                 {
