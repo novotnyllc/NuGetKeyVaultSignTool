@@ -57,6 +57,8 @@ namespace NuGetKeyVaultSignTool
                                           SignatureType signatureType, HashAlgorithmName signatureHashAlgorithm, HashAlgorithmName timestampHashAlgorithm, 
                                           bool overwrite, X509Certificate2 publicCertificate, System.Security.Cryptography.RSA rsa, CancellationToken cancellationToken = default)
         {
+            bool inPlaceSigning = String.Equals(packagePath, outputPath);
+            bool usingWildCards = packagePath.Contains('*') || packagePath.Contains('?');
             var packagesToSign = LocalFolderUtility.ResolvePackageFromPath(packagePath);
             
             var signatureProvider = new KeyVaultSignatureProvider(rsa, new Rfc3161TimestampProvider(new Uri(timestampUrl)));
@@ -77,8 +79,22 @@ namespace NuGetKeyVaultSignTool
                 try
                 {
                     originalPackageCopyPath = CopyPackage(package);
-
-                    using var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, outputPath, overwrite, signatureProvider, new NuGetLogger(logger, package));
+                    string signedPackagePath = outputPath;
+                    if (inPlaceSigning)
+                    {
+                        signedPackagePath = package;
+                    }
+                    else if (usingWildCards)
+                    {
+                        var packageFile = Path.GetFileName(package);
+                        string pathName = Path.GetDirectoryName(outputPath + Path.DirectorySeparatorChar);
+                        if (!Directory.Exists(pathName))
+                        {
+                            Directory.CreateDirectory(pathName);
+                        }
+                        signedPackagePath = pathName + Path.DirectorySeparatorChar + packageFile;
+                    }
+                    using var options = SigningOptions.CreateFromFilePaths(originalPackageCopyPath, signedPackagePath, overwrite, signatureProvider, new NuGetLogger(logger, package));
                     await SigningUtility.SignAsync(options, request, cancellationToken);
                 }
                 catch (Exception e)
