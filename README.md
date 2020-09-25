@@ -5,7 +5,7 @@ This tool adds [code signatures to a NuGet package](https://docs.microsoft.com/e
 
 # Getting started
 
-This tool is a .NET Core global tool. It can be installed with `dotnet tool install --global NuGetKeyVaultSignTool`. The tool requieres the .NET Core 3.1 SDK on Windows and .NET 5.0 on other platforms.
+This tool is a .NET Core global tool. It can be installed with `dotnet tool install --global NuGetKeyVaultSignTool`. The tool requires the .NET Core 3.1 SDK on Windows and .NET 5.0 on other platforms.
 
 Example:
 ```ps1
