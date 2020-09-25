@@ -1,9 +1,9 @@
 trigger:
-  - master
+  - main
   - rel/*
 
 pr:
-  - master
+  - main
   - rel/*
 
 stages:
@@ -19,9 +19,10 @@ stages:
 
     steps:
     - task: UseDotNet@2
-      displayName: 'Use .NET Core SDK 3.1.x'
+      displayName: 'Use .NET Core SDK 5.0.x'
       inputs:
-        version: 3.1.x    
+        version: 5.0.x
+        includePreviewVersions: true
 
     - task: DotNetCoreCLI@2  
       inputs:
@@ -81,7 +82,7 @@ stages:
               --secret "$(SignClientSecret)" `
               --name "NuGetKeyVaultSignTool" `
               --description "NuGetKeyVaultSignTool" `
-              --descriptionUrl "https://github.com/onovotny/NuGetKeyVaultSignTool"
+              --descriptionUrl "https://github.com/novotnyllc/NuGetKeyVaultSignTool"
             displayName: Sign packages
               
           - publish: $(Pipeline.Workspace)/BuildPackages

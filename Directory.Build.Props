@@ -4,7 +4,7 @@
     <Copyright>Copyright (C) Claire Novotny</Copyright>
     <Description>Enables NuGet package signing using certificates in Azure Key Vault</Description>
     <PackageTags>authenticode;key-vault;nuget</PackageTags>
-    <PackageProjectUrl>https://github.com/onovotny/NuGetKeyVaultSignTool</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/novotnyllc/NuGetKeyVaultSignTool</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts\</PackageOutputPath>
     <DebugType>embedded</DebugType>
@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All"/>
-    <PackageReference Include="Nerdbank.GitVersioning" Version="3.1.74" PrivateAssets="all" />
+    <PackageReference Include="Nerdbank.GitVersioning" Version="3.2.31" PrivateAssets="all" />
   </ItemGroup>
 
 
