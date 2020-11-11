@@ -52,8 +52,7 @@ namespace NuGetKeyVaultSignTool
                 {
                     if (string.IsNullOrWhiteSpace(packagePath.Value))
                     {
-                        const string V = "Path to file(s) to sign are requried";
-                        object p = logger.LogError(V);
+                        logger.LogError("Path to file(s) to sign are required");
                         return -1;
                     }
 
