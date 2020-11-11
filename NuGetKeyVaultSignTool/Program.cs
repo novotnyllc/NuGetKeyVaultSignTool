@@ -33,7 +33,7 @@ namespace NuGetKeyVaultSignTool
 
                 var packagePath = signConfiguration.Argument("packagePath", "Package to sign.");
                 var outputPath = signConfiguration.Option("-o | --output", "The output file. If omitted, overwrites input.", CommandOptionType.SingleValue);
-                var force = signConfiguration.Option("-f | --force", "Overwrites a sigature if it exists.", CommandOptionType.NoValue);
+                var force = signConfiguration.Option("-f | --force", "Overwrites a signature if it exists.", CommandOptionType.NoValue);
                 var fileDigestAlgorithm = signConfiguration.Option("-fd | --file-digest", "The digest algorithm to hash the file with. Default option is sha256", CommandOptionType.SingleValue);
                 var rfc3161TimeStamp = signConfiguration.Option("-tr | --timestamp-rfc3161", "Specifies the RFC 3161 timestamp server's URL. If this option (or -t) is not specified, the signed file will not be timestamped.", CommandOptionType.SingleValue);
                 var rfc3161Digest = signConfiguration.Option("-td | --timestamp-digest", "Used with the -tr switch to request a digest algorithm used by the RFC 3161 timestamp server. Default option is sha256", CommandOptionType.SingleValue);
@@ -52,7 +52,7 @@ namespace NuGetKeyVaultSignTool
                 {
                     if (string.IsNullOrWhiteSpace(packagePath.Value))
                     {
-                        logger.LogError("Path to file(s) to sign are requried");
+                        logger.LogError("Path to file(s) to sign are required");
                         return -1;
                     }
 
