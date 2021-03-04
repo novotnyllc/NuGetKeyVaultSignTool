@@ -8,14 +8,14 @@
     <PackageReference Include="Azure.Security.KeyVault.Certificates" Version="4.1.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.9" />
     <PackageReference Include="NuGet.Packaging" Version="5.8.0-preview.3.6823" />
-    <PackageReference Include="NuGet.Protocol" Version="5.8.0-preview.3.6823" />    
+    <PackageReference Include="NuGet.Protocol" Version="5.9.0" />    
     <PackageReference Include="RSAKeyVaultProvider" Version="2.1.1" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="5.0.0-rc.1.20451.14" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1'">
     <PackageReference Update="NuGet.Packaging" Version="5.6.0-xprivate.60020" />
-    <PackageReference Update="NuGet.Protocol" Version="5.6.0-xprivate.60020" />
+    <PackageReference Update="NuGet.Protocol" Version="5.9.0" />
   </ItemGroup>
   
 </Project>
