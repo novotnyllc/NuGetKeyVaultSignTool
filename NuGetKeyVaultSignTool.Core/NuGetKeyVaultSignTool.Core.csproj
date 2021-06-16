@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Security.KeyVault.Certificates" Version="4.1.1" />
+    <PackageReference Include="Azure.Security.KeyVault.Certificates" Version="4.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.9" />
     <PackageReference Include="NuGet.Packaging" Version="5.8.0-preview.3.6823" />
     <PackageReference Include="NuGet.Protocol" Version="5.8.0-preview.3.6823" />    
