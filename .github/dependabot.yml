@@ -5,10 +5,3 @@ updates:
   schedule:
     interval: daily
   open-pull-requests-limit: 10
-  ignore:
-  - dependency-name: NuGet.Packaging
-    versions:
-    - 5.9.0
-  - dependency-name: NuGet.Protocol
-    versions:
-    - 5.9.0
