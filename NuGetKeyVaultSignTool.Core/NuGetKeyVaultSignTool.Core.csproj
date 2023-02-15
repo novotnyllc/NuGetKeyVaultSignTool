@@ -10,7 +10,7 @@
     <PackageReference Include="NuGet.Packaging" Version="6.0.0-preview.4.243" />
     <PackageReference Include="NuGet.Protocol" Version="6.0.0-preview.4.243" />    
     <PackageReference Include="RSAKeyVaultProvider" Version="2.1.1" />
-    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="6.0.0-rc.2.21480.5" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="7.0.1" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1'">
