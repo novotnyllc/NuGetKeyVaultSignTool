@@ -1,11 +1,11 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Security.KeyVault.Certificates" Version="4.2.0" />
+    <PackageReference Include="Azure.Security.KeyVault.Certificates" Version="4.5.1" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0-rc.2.21480.5" />
     <PackageReference Include="NuGet.Packaging" Version="6.0.0-preview.4.243" />
     <PackageReference Include="NuGet.Protocol" Version="6.0.0-preview.4.243" />    
