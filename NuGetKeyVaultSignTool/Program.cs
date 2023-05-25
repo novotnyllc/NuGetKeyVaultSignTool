@@ -29,7 +29,7 @@ namespace NuGetKeyVaultSignTool
                 var outputPath = signConfiguration.Option("-o | --output", "The output file. If omitted, overwrites input.", CommandOptionType.SingleValue);
                 var force = signConfiguration.Option("-f | --force", "Overwrites a signature if it exists.", CommandOptionType.NoValue);
                 var fileDigestAlgorithm = signConfiguration.Option("-fd | --file-digest", "The digest algorithm to hash the file with. Default option is sha256", CommandOptionType.SingleValue);
-                var rfc3161TimeStamp = signConfiguration.Option("-tr | --timestamp-rfc3161", "Specifies the RFC 3161 timestamp server's URL. If this option (or -t) is not specified, the signed file will not be timestamped.", CommandOptionType.SingleValue);
+                var rfc3161TimeStamp = signConfiguration.Option("-tr | --timestamp-rfc3161", "Specifies the RFC 3161 timestamp server's URL.", CommandOptionType.SingleValue);
                 var rfc3161Digest = signConfiguration.Option("-td | --timestamp-digest", "Used with the -tr switch to request a digest algorithm used by the RFC 3161 timestamp server. Default option is sha256", CommandOptionType.SingleValue);
                 var signatureType = signConfiguration.Option("-st | --signature-type", "The signature type (omit for author, default. Only author is supported currently).", CommandOptionType.SingleValue);
                 var v3ServiceIndexUrl = signConfiguration.Option("-v3si | --v3-service-index-url", "Specifies V3 Service Index Url. Required if SignatureType is Repository", CommandOptionType.SingleValue);
