@@ -53,26 +53,26 @@ namespace NuGetKeyVaultSignTool
                     if (!azureKeyVaultUrl.HasValue())
                     {
                         logger.LogError("Key Vault URL not specified");
-                        return -1;
+                        return -2;
                     }
 
                     if (!azureKeyVaultCertificateName.HasValue())
                     {
                         logger.LogError("Certificate name not specified");
-                        return -1;
+                        return -3;
                     }
 
                     if (!rfc3161TimeStamp.HasValue())
                     {
                         logger.LogError("Timestamp url not specified");
-                        return -1;
+                        return -4;
                     }
 
                     var valid = (azureKeyVaultAccessToken.HasValue() || azureKeyVaultMsi.HasValue() || (azureKeyVaultClientId.HasValue() && azureKeyVaultClientSecret.HasValue() && azureKeyVaultTenantId.HasValue()));
                     if (!valid)
                     {
                         logger.LogError("Either access token or clientId, client secret, and tenant id must be specified");
-                        return -1;
+                        return -5;
                     }
 
                     var sigHashAlg = GetValueFromOption(fileDigestAlgorithm, AlgorithmFromInput, HashAlgorithmName.SHA256);
@@ -87,26 +87,26 @@ namespace NuGetKeyVaultSignTool
                         if (!v3ServiceIndexUrl.HasValue())
                         {
                             logger.LogError("Service index url must be specified for repository signatures");
-                            return -1;
+                            return -6;
                         }
 
                         if (!Uri.TryCreate(v3ServiceIndexUrl.Value(), UriKind.Absolute, out v3ServiceIndex))
                         {
                             logger.LogError($"Could not parse '{v3ServiceIndexUrl.Value()}' as a Uri");
-                            return -1;
+                            return -7;
                         }
 
                         if (!packageOwners.HasValue())
                         {
                             logger.LogError("At least one package owner must be specified for repository signatures");
-                            return -1;
+                            return -8;
                         }
                     }
 
                     if (!Uri.TryCreate(azureKeyVaultUrl.Value(), UriKind.Absolute, out Uri keyVaultUri))
                     {
                         logger.LogError($"Could not parse '{azureKeyVaultUrl.Value()}' as a Uri");
-                        return -1;
+                        return -9;
                     }
 
                     var output = string.IsNullOrWhiteSpace(outputPath.Value()) ? packagePath.Value : outputPath.Value();
@@ -135,14 +135,14 @@ namespace NuGetKeyVaultSignTool
                                          timeHashAlg,
                                          sigType,
                                          force.HasValue(),
-                                         v3ServiceIndex,             
+                                         v3ServiceIndex,
                                          packageOwners.Values,
                                          azureKeyVaultCertificateName.Value(),
                                          keyVaultUri,
                                          credential
                                          );
 
-                    return result ? 0 : -1;
+                    return result ? 0 : -10;
                 });
             }
             );
