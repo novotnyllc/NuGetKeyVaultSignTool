@@ -153,13 +153,13 @@ namespace NuGetKeyVaultSignTool
                 verifyConfiguration.Description = "Verifies NuGet packages are signed correctly";
                 verifyConfiguration.HelpOption("-? | -h | --help");
 
-                var file = verifyConfiguration.Argument("file", "File to sign.");
+                var file = verifyConfiguration.Argument("file", "File to verify");
 
                 verifyConfiguration.OnExecute(async () =>
                 {
                     if (string.IsNullOrWhiteSpace(file.Value))
                     {
-                        application.Error.WriteLine("All arguments are required");
+                        application.Error.WriteLine("Path to file to verify is required");
                         return -1;
                     }
 
