@@ -1,11 +1,8 @@
 ﻿using Microsoft.Extensions.CommandLineUtils;
 using System;
-using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using NuGet.Common;
 using NuGet.Packaging.Signing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Azure.Core;
 using Azure.Identity;
@@ -16,14 +13,11 @@ namespace NuGetKeyVaultSignTool
     {
         internal static int Main(string[] args)
         {
-
-            var serviceCollection = new ServiceCollection()
-                .AddLogging(builder =>
-                {
-                    builder.AddConsole();
-                });
-            var serviceProvider = serviceCollection.BuildServiceProvider();
-            var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+            });
+            var logger = loggerFactory.CreateLogger<Program>();
 
             var application = new CommandLineApplication(throwOnUnexpectedArg: false);
             var signCommand = application.Command("sign", throwOnUnexpectedArg: false, configuration: signConfiguration =>
