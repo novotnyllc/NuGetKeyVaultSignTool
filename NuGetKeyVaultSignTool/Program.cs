@@ -92,7 +92,7 @@ namespace NuGetKeyVaultSignTool
 
                         if (!Uri.TryCreate(v3ServiceIndexUrl.Value(), UriKind.Absolute, out v3ServiceIndex))
                         {
-                            logger.LogError($"Could not parse '{v3ServiceIndexUrl.Value()}' as a Uri");
+                            logger.LogError("Could not parse '{uri}' as a Uri", v3ServiceIndexUrl.Value());
                             return -7;
                         }
 
@@ -105,7 +105,7 @@ namespace NuGetKeyVaultSignTool
 
                     if (!Uri.TryCreate(azureKeyVaultUrl.Value(), UriKind.Absolute, out Uri keyVaultUri))
                     {
-                        logger.LogError($"Could not parse '{azureKeyVaultUrl.Value()}' as a Uri");
+                        logger.LogError("Could not parse '{uri}' as a Uri", azureKeyVaultUrl.Value());
                         return -9;
                     }
 
