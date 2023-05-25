@@ -47,8 +47,8 @@ Options:
 
 * `-o | --output` - The output file. If omitted, overwrites input.
 * `-f | --force` - Overwrites a signature if it exists.
-* `-fd | --file-digest` - The digest algorithm to hash the file with.
-* `-tr | --timestamp-rfc3161` - Specifies the RFC 3161 timestamp server's URL. If this option (or -t) is not specified, the signed file will not be timestamped.
+* `-fd | --file-digest` - The digest algorithm to hash the file with. Default option is sha256
+* `-tr | --timestamp-rfc3161` - Specifies the RFC 3161 timestamp server's URL.
 * `-td | --timestamp-digest` - Used with the -tr switch to request a digest algorithm used by the RFC 3161 timestamp server.
 * `-st | --signature-type` - The signature type (omit for author, default. Only author is supported currently).
 * `-kvu | --azure-key-vault-url` - The URL to an Azure Key Vault.
