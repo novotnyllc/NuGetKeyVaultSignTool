@@ -12,12 +12,9 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.CommandLineUtils" Version="1.1.1" />
-    <ProjectReference Include="..\NuGetKeyVaultSignTool.Core\NuGetKeyVaultSignTool.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.1.1" />
     <PackageReference Update="Nerdbank.GitVersioning" Version="3.6.133" />
+	<ProjectReference Include="..\NuGetKeyVaultSignTool.Core\NuGetKeyVaultSignTool.Core.csproj" />
   </ItemGroup>
 
 </Project>

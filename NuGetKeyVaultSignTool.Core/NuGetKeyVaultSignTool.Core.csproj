@@ -10,14 +10,8 @@
     <PackageReference Include="NuGet.Protocol" Version="6.0.0-preview.4.243" />    
     <PackageReference Include="RSAKeyVaultProvider" Version="2.1.1" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="6.0.4" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1'">
-    <PackageReference Update="NuGet.Packaging" Version="6.7.0" />
-    <PackageReference Update="NuGet.Protocol" Version="6.7.0" />
-  </ItemGroup>
-
-  <ItemGroup>
+	  <PackageReference Update="NuGet.Packaging" Version="6.7.0" />
+	  <PackageReference Update="NuGet.Protocol" Version="6.7.0" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.1.1" />
     <PackageReference Update="Nerdbank.GitVersioning" Version="3.6.133" />
   </ItemGroup>
