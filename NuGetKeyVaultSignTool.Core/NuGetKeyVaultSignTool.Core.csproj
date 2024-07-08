@@ -1,21 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Security.KeyVault.Certificates" Version="4.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0-rc.2.21480.5" />
-    <PackageReference Include="NuGet.Packaging" Version="6.0.0-preview.4.243" />
-    <PackageReference Include="NuGet.Protocol" Version="6.0.0-preview.4.243" />    
+    <PackageReference Include="Azure.Security.KeyVault.Certificates" Version="4.6.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="NuGet.Packaging" Version="6.10.1" />
+    <PackageReference Include="NuGet.Protocol" Version="6.10.1" />
     <PackageReference Include="RSAKeyVaultProvider" Version="2.1.1" />
-    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="6.0.0-rc.2.21480.5" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1'">
     <PackageReference Update="NuGet.Packaging" Version="6.0.0-xprivate.60026" />
     <PackageReference Update="NuGet.Protocol" Version="6.0.0-xprivate.60026" />
   </ItemGroup>
-  
+
+  <ItemGroup>
+    <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageReference Update="Nerdbank.GitVersioning" Version="3.6.139" />
+  </ItemGroup>
+
 </Project>
